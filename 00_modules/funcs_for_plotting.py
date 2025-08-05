@@ -10,6 +10,7 @@ import sys
 sys.path.append('../00_modules/.')
 from get_misc_data import MiscDataGetter
 import splining_functions as Spliner
+from funcs_for_multimodel_analysis import MMFuncs
 
 # import plotting packages
 import matplotlib.pyplot as plt
@@ -164,18 +165,18 @@ class Plotter:
             agreement_to_plot = xr.where(da_omask,ts_agreement[ts_key],np.NaN)
     
             # Choose the colormap
-            if time_slice_type != 'absolute_values' and ts_key != '0_preindustrial':
+            if time_slice_type == 'absolute_value' or ts_key == '0_preindustrial' or ts_key == '0_signed_hysteresis_area':
+                vmin_to_plot = vmin
+                vmax_to_plot = vmax
+                cmap_to_plot = cmap      
+            else:
                 vmin_to_plot = amin
                 vmax_to_plot = amax
                 cmap_to_plot = amap
-            else:
-                vmin_to_plot = vmin
-                vmax_to_plot = vmax
-                cmap_to_plot = cmap            
-    
+          
             # Plot the data
             all_cs[sdx] = ax[sdx].pcolormesh(mmm_to_plot.lon,mmm_to_plot.lat,mmm_to_plot,vmin=vmin_to_plot,vmax=vmax_to_plot,cmap=cmap_to_plot,transform=ccrs.PlateCarree())
-            if time_slice_type != 'absolute_values' and ts_key != '0_preindustrial':
+            if time_slice_type != 'absolute_value' and ts_key != '0_preindustrial':
                 ax[sdx].contourf(agreement_to_plot.lon,agreement_to_plot.lat,agreement_to_plot,colors=[(0.5,0.5,0.5,0),(0.5,0.5,0.5,0)],levels=[-0.5,0.5,1.5],hatches=['///',None],transform=ccrs.PlateCarree()); # 'cmo.phase'
     
             ax[sdx].add_feature(cartopy.feature.LAND, zorder=2, edgecolor='None',facecolor='#888888')
@@ -202,7 +203,7 @@ class Plotter:
                 ax[0].contour(region_mask.lon,region_mask.lat,region_mask,[0.5],colors='k',transform=ccrs.PlateCarree(),linewidths=4)
                 ax[0].contour(region_mask.lon,region_mask.lat,region_mask,[0.5],colors='w',transform=ccrs.PlateCarree(),linewidths=2) 
             
-        plt.tight_layout()
+        #plt.tight_layout()
         plt.subplots_adjust(right=0.9)
         plt.show()
         return fig, ax
@@ -221,13 +222,17 @@ class Plotter:
             da_omask  = MiscDataGetter._get_ocean_mask()
             data_to_plot = variable_dict[key][da_name] #* da_omask
             data_to_plot_masked = xr.where(da_omask,data_to_plot,np.NaN)
-            c0 = ax[kdx].pcolormesh(data_to_plot.lon,data_to_plot.lat,data_to_plot_masked,transform=ccrs.PlateCarree(),vmin=vmin,vmax=vmax,cmap=cmap)
-            ax[kdx].coastlines()
-            ax[kdx].gridlines(alpha=0.75)
-            ax[kdx].set_extent([-180, 180, 55.0, 90], ccrs.PlateCarree()) # # Focus on Arctic region
-            ax[kdx].add_feature(cartopy.feature.LAND, zorder=2, edgecolor='black',facecolor='#888888')
-            Plotter.add_circle_boundary(ax[kdx])
-            ax[kdx].set_title(run_params[key].model)
+            if nkeys == 1:
+                axi = ax
+            else:
+                axi = ax[kdx]
+            c0 = axi.pcolormesh(data_to_plot.lon,data_to_plot.lat,data_to_plot_masked,transform=ccrs.PlateCarree(),vmin=vmin,vmax=vmax,cmap=cmap)
+            axi.coastlines()
+            axi.gridlines(alpha=0.75)
+            axi.set_extent([-180, 180, 55.0, 90], ccrs.PlateCarree()) # # Focus on Arctic region
+            axi.add_feature(cartopy.feature.LAND, zorder=2, edgecolor='black',facecolor='#888888')
+            Plotter.add_circle_boundary(axi)
+            axi.set_title(run_params[key].model)
         cbax = fig.add_axes([0.92,0.25,0.02,0.5])
         cbar = plt.colorbar(c0,cax=cbax,fraction=0.04,pad=0.01,extend='neither')
         cbar.ax.set_title(label=unit)
@@ -301,3 +306,145 @@ class Plotter:
             return fig,ax,ax2
         else:
             return fig,ax
+
+    def _plot_time_series_of_regional_hysteresis_decomposition(run_params, variable_to_analyze, loc_reg, model_ds, taylor_ds):
+        
+        # plot setup
+        conts_for_plotting = ['t','s','alk','alk_dilution','alk_bgc','dic','dic_dilution','dic_bgc','alk_dic','dilution_terms','bgc_terms','taylor_sum']
+        line_labels = ['T','S','A$_T$','A$_{T,fw}$','A$_{T,bgc}$','C$_T$','C$_{T,fw}$','C$_{T,bgc}$','A$_T$ + C$_T$','A$_{T,fw}$ + C$_{T,fw}$','A$_{T,bgc}$ + C$_{T,bgc}$',r'$\Sigma_\text{Taylor}$']
+        tcs =  plt.cm.tab20c( (4./3*np.arange(20*3/4)).astype(int) )
+        line_colors = [tcs[3],tcs[0],tcs[6],tcs[6],tcs[6],tcs[9],tcs[9],tcs[9],tcs[13],tcs[13],tcs[13],'k']
+        linestyles = ['-','-','-',':','--','-',':','--','-',':','--','-']
+        if variable_to_analyze == 'ph':
+            varia2 = r'[$H^+$]'
+            unit = r'nmol kg$^{-1}$'
+            #ylims = [-9,9]
+            #hlines = [-7.5,-5,-2.5,2.5,5,7.5]
+        elif variable_to_analyze == 'omegaa':
+            varia2 = r'$\Omega_\text{Arag.}$'
+            unit = '-'
+            #ylims = [-.3,.3]
+            #hlines = [-.2,-.1,.1,.2]
+        
+        fontsize = 14
+        plt.rcParams['font.size']=fontsize
+        fig,ax = plt.subplots(figsize=(12,4))
+        # plot the contributions
+        for i, cont in enumerate(conts_for_plotting):
+            meanval,_ = MMFuncs._calc_multimodel_mean_and_agreement(taylor_ds[cont][loc_reg])
+            ax.plot(meanval,color=line_colors[i],linewidth=4,label=line_labels[i],linestyle=linestyles[i])
+        # plot the direct model output
+        meanmodel,_ = MMFuncs._calc_multimodel_mean_and_agreement(model_ds[loc_reg])
+        meanmodel_delta = meanmodel - meanmodel.isel(year=0)
+        ax.plot(meanmodel_delta,color='r',label=f'model {varia2}',zorder=10)
+    
+        ax.set_xlim([0,340])
+        ax.axvline([139.5],linestyle='-',color='#555555',alpha=1,zorder=0,linewidth=1)
+        ax.axvline([279.5],linestyle='-',color='#555555',alpha=1,zorder=0,linewidth=1)
+        ax.axhline(0,color='k',linestyle=':')
+        ax.spines[['right', 'top']].set_visible(False)
+        ax.set_title(f'a) {loc_reg} {varia2} decomposition',loc='left')
+        ax.set_xlabel('Year')
+        ax.set_ylabel(f'Cumulative changes in {unit}')
+        if variable_to_analyze == 'ph':
+            csp = 0.5
+        elif variable_to_analyze == 'omegaa':
+            csp = 24
+        #ax.legend(loc='lower left',ncols=2,fontsize=10,framealpha=0,columnspacing=csp)
+        ax.legend(loc='lower left',bbox_to_anchor=(1.01,-0.09),ncols=1,fontsize=10,framealpha=0,columnspacing=csp,handlelength=4)
+        ax.set_xlim([0,340])
+        ax.grid(linestyle='--',linewidth=0.25,axis='y')
+        ylims = ax.get_ylim()
+        miny = ylims[0]
+        maxy = ylims[1]
+        ax.fill_between(np.array([0,20])-0.5,[miny]*2,[maxy]*2,alpha=0.081,color='C0')
+        ax.fill_between(np.array([60,80])-0.5,[miny]*2,[maxy]*2,alpha=0.081,color='C1')
+        ax.fill_between(np.array([120,140])-0.5,[miny]*2,[maxy]*2,alpha=0.081,color='C2')
+        ax.fill_between(np.array([200,220])-0.5,[miny]*2,[maxy]*2,alpha=0.081,color='C1')
+        ax.fill_between(np.array([260,280])-0.5,[miny]*2,[maxy]*2,alpha=0.081,color='C0')
+        ax.fill_between(np.array([320,340])-0.5,[miny]*2,[maxy]*2,alpha=0.081,color='C3')
+        ax.set_xticks(np.array([0,20,40,60,80,100,120,140,160,180,200,220,240,260,280,300,320,340])-0.5)
+        ax.set_xticklabels([0,'','',60,'','','',140,'','','',220,'','',280,'','',340])#,fontweight='bold')
+        ax.set_ylim(ylims)
+        plt.tight_layout()
+        plt.subplots_adjust(left=0.15)
+        plt.show()
+        return fig, ax 
+
+    def _plot_bars_of_regional_hysteresis_decomposition(run_params, variable_to_analyze, loc_reg, hyst_model, hyst_taylor_contributions):
+    
+        # === Setup ===
+        conts = ['taylor_sum', 't', 's', 'alk', 'alk_dilution', 'alk_bgc', 'dic', 'dic_dilution', 'dic_bgc', 'alk_dic', 'dilution_terms', 'bgc_terms']
+        labels = [r'$\Sigma_\text{Taylor}$', 'T', 'S', 'A$_T$', 'A$_{T,fw}$', 'A$_{T,bgc}$', 'C$_T$', 'C$_{T,fw}$', 'C$_{T,bgc}$',
+                  'A$_T$ + C$_T$', 'A$_{T,fw}$ + C$_{T,fw}$', 'A$_{T,bgc}$ + C$_{T,bgc}$']
+        heights = [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.5, 0.4, 0.4, 0.5, 0.4, 0.4]
+        ypos = -1 * np.array([ -1, 0, 1, 2, 2.5, 3, 4, 4.5, 5, 6, 6.5, 7 ])
+        tcs =  plt.cm.tab20c( (4./3*np.arange(20*3/4)).astype(int) )
+        colors = ['k',tcs[3],tcs[0],tcs[6],tcs[7],tcs[8],tcs[9],tcs[10],tcs[11],tcs[12],tcs[13],tcs[14]]# ['k'] + list(plt.cm.tab20c((4./3*np.arange(15)).astype(int))[:11])
+    
+        var_map = {
+            'ph': (r'[$H^+$]', r'nmol kg$^{-1}$', [-25, 25], [-7.5, -5, -2.5, 2.5, 5, 7.5]),
+            'omegaa': (r'$\Omega_\text{Arag.}$', '-', [-.5, .5], [-.2, -.1, .1, .2])
+        }
+        varia2, unit, xlims, hlines = var_map[variable_to_analyze]
+        hyst_metric = 'signed_hysteresis_area'
+    
+        # === Plot ===
+        fig, ax = plt.subplots(1, 3, figsize=(12, 6), sharey=True, width_ratios=[1, 5, 1])
+    
+        for i, cont in enumerate(conts):
+            meanval = hyst_taylor_contributions[cont][loc_reg].sel(h_definition=hyst_metric).mean(dim='run_keys')
+            ax[1].barh(ypos[i], meanval, height=heights[i], color=colors[i], edgecolor='None', zorder=1)
+            for axi in ax:
+                for key, param in run_params.items():
+                    val = hyst_taylor_contributions[cont][loc_reg].sel(h_definition=hyst_metric, run_keys=key)
+                    axi.scatter(val, ypos[i], 50, color=param.runcol, clip_on=True)
+    
+        # === Model hysteresis ===
+        model_y = 2
+        modelvals = hyst_model[loc_reg].sel(h_definition=hyst_metric)
+        modelmean = modelvals.mean(dim='run_keys')
+        ax[1].barh(model_y, modelmean, height=0.5, color='None', edgecolor='r', linewidth=1, zorder=1)
+        for axi in ax:
+            for key, param in run_params.items():
+                axi.scatter(modelvals.sel(run_keys=key), model_y, 50, color=param.runcol, clip_on=True, label=param.model)
+    
+        # === Beautify ===
+        for axi in ax:
+            axi.axvline(0, color='k')
+            axi.set_yticks([model_y] + list(ypos))
+            axi.set_yticklabels([f'model {varia2}'] + labels)
+            axi.set_xlabel(f'$H_s$ ({unit})')
+            axi.set_xlim(xlims)
+            axi.grid(alpha=0.5, zorder=0, linewidth=0.5)
+            axi.spines[['right', 'top']].set_visible(False)
+    
+        ax[0].set_title(f'b) {loc_reg} $H_s$ decomposition for {varia2}', loc='left')
+        ax[1].tick_params(left=False, labelleft=False)
+        ax[-1].tick_params(left=False, labelleft=False)
+        ax[0].set_xlabel('')
+        ax[-1].set_xlabel('')
+        ax[0].set_title('')
+        ax[-1].set_title('')
+        ax[1].set_ylim([-7.5, 2.375])
+    
+        # Custom axis limits for ph1 or omegaa
+        if variable_to_analyze == 'ph1':
+            xticks = [[-24, -18, -12], [-6, 0, 6], [12, 18, 24]]
+            xlims = [[-25.5, -12], [-12, 12], [12, 25.5]]
+        else:
+            xticks = [[-.5,-.4], [-.3,-.2,-.1, 0,.1,.2, .3], [.4,.5]]
+            xlims = [[-0.52, -0.3], [-0.3, 0.3], [0.3, 0.52]]
+    
+        for i in range(3):
+            ax[i].set_xticks(xticks[i])
+            ax[i].set_xlim(xlims[i])
+    
+        # === Legend ===
+        legend_ncols = 1 if variable_to_analyze == 'omegaa' else 2
+        ax[-1].legend(ncols=legend_ncols, loc='lower left', bbox_to_anchor=(-6, 0), fontsize=12, handletextpad=0.2, columnspacing=0.2, framealpha=1)
+    
+        plt.tight_layout()
+        plt.subplots_adjust(wspace=0, top=0.92, left=0.15, right=0.9)
+        return fig, ax
+

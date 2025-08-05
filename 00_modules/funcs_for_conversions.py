@@ -26,7 +26,7 @@ class Converter:
             conversion_factor = 1/sw_density
         return conversion_factor
 
-    def _convert_from_mol_per_m3_to_mumol_per_kg(run_params,ds_data_dict,temporal_resolution,depth_to_analyze):
+    def _convert_from_mol_per_m3_to_mumol_per_kg(run_params,run_paths,temporal_resolution,depth_to_analyze):
         """
         A function to convert from "mol per m3" to "mumol per kg".
         Density is required to do this.
@@ -34,20 +34,62 @@ class Converter:
 
         # first get the density data
         dens_paths = ModelDataGetter._identify_path_strings(run_params,'denis',depth_to_analyze)
-        print(dens_paths)
-        ds_dens_dict   = ModelDataGetter._open_datasets(dens_paths)
+        #ds_dens_dict   = ModelDataGetter._open_datasets(dens_paths)
 
         # now, go through each model and multiply with a conversion factor
         ds_conv_dict = dict()
         for key in run_params.keys():
-            datum = ds_data_dict[key][temporal_resolution]
-            dens = ds_dens_dict[key][temporal_resolution]
-            conv_factor = Converter.__conversion_factors('from_per_m3_to_per_kg',dens) * Converter.__conversion_factors('from_1_to_micro')
-            converted_datum = Converter.__convert_by_multiplication(datum,conv_factor)
+            if isinstance(run_paths[key],str):
+                with xr.open_dataset(run_paths[key]) as ds_data:
+                    datum = ds_data[temporal_resolution]
+                    with xr.open_dataset(dens_paths[key]) as ds_dens:
+                        dens = ds_dens[temporal_resolution]
+                        conv_factor = Converter.__conversion_factors('from_per_m3_to_per_kg',dens) * Converter.__conversion_factors('from_1_to_micro')
+                    converted_datum = Converter.__convert_by_multiplication(datum,conv_factor)
+            elif isinstance(run_paths[key],xr.Dataset):
+                datum = run_paths[key][temporal_resolution]
+                with xr.open_dataset(dens_paths[key]) as ds_dens:
+                    dens = ds_dens[temporal_resolution]
+                    conv_factor = Converter.__conversion_factors('from_per_m3_to_per_kg',dens) * Converter.__conversion_factors('from_1_to_micro')
+                converted_datum = Converter.__convert_by_multiplication(datum,conv_factor)
             converted_datum.attrs["units"] = "mumol per kg"
             converted_ds = xr.Dataset()
             converted_ds[temporal_resolution] = converted_datum
-            converted_ds
             ds_conv_dict[key] = converted_ds
 
         return ds_conv_dict
+
+    
+    def _normalize_with_salinity(run_params,run_paths,temporal_resolution,depth_to_analyze,var_to_analyze,standard_salinity=35):
+        """
+        A function to normalize a concentration with salinity (in psu). Standardized to a standard_salinity of 35 psu (default).
+        """
+
+        # first get the salinity data
+        salt_paths = ModelDataGetter._identify_path_strings(run_params,'so',depth_to_analyze)
+        #print(salt_paths)            
+        #ds_salt_dict   = ModelDataGetter._open_datasets(salt_paths)
+        #print(ds_salt_dict)
+        
+        # now, go through each model and multiply with a conversion factor
+        ds_snorm_dict = dict()
+        for key in run_params.keys():
+            if isinstance(run_paths[key],str):
+                with xr.open_dataset(run_paths[key]) as ds_data:
+                    datum = ds_data[temporal_resolution]
+                    with xr.open_dataset(salt_paths[key]) as ds_salt:
+                        salt = ds_salt[temporal_resolution]
+                        conv_factor = 1/salt * standard_salinity # 
+                    converted_datum = Converter.__convert_by_multiplication(datum,conv_factor)
+            elif isinstance(run_paths[key],xr.Dataset):
+                datum = run_paths[key][temporal_resolution]
+                with xr.open_dataset(salt_paths[key]) as ds_salt:
+                    salt = ds_salt[temporal_resolution]
+                    conv_factor = 1/salt * standard_salinity # 
+                converted_datum = Converter.__convert_by_multiplication(datum,conv_factor)
+            converted_ds = xr.Dataset()
+            converted_ds[temporal_resolution] = converted_datum
+            ds_snorm_dict[key] = converted_ds
+        var_to_analyze_normalized = var_to_analyze + '_salinity_normalized'
+
+        return ds_snorm_dict, var_to_analyze_normalized

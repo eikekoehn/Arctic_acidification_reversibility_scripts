@@ -9,6 +9,31 @@ from get_misc_data import MiscDataGetter
 
 class MMFuncs:
 
+    def _calc_model_agreement(data_da,agreement_type='sign',agreement_thresh='at_least_80percent_agree'):
+        
+        nkeys = len(data_da.run_keys)
+
+        if agreement_type == 'mean_bigger_than_std':
+            mmstd = data_da.std(dim='run_keys')
+            agreement = mmm>mmstd
+        elif agreement_type == 'sign':
+            if agreement_thresh=='at_least_70percent_agree':
+                athresh = .7*nkeys # 6/8
+            elif agreement_thresh=='at_least_80percent_agree':
+                athresh = .8*nkeys # 7/8
+            elif agreement_thresh=='at_least_100percent_agree':
+                athresh = 1*nkeys # 8/8
+            else:
+                raise Exception("Other agreement threshold for agreement_type == 'sign' is not yet implemented.")
+            # count the positives and negatives
+            positives = (data_da>0).sum(dim='run_keys')
+            negatives = (data_da<0).sum(dim='run_keys')
+            # check if either the positives or the negatives exceed the threshold
+            agreement = (positives >= athresh) + (negatives >= athresh)
+        else:
+            agreement = None
+        return agreement
+        
     def _calc_multimodel_mean_and_agreement(data_dict, da_name=None, agreement_type = 'sign', agreement_thresh='at_least_80percent_agree'):
 
         # Get all the different runs and put them into a list
@@ -27,32 +52,13 @@ class MMFuncs:
             data_list.append(da)
 
         # Concatenate the list into a new xr.DataArray
-        data_da = xr.concat(data_list,dim='keys')
+        data_da = xr.concat(data_list,dim='run_keys')
 
         # Compute the mean over concatenated dimension
-        mmm = data_da.mean(dim='keys')
+        mmm = data_da.mean(dim='run_keys')
 
-        nkeys = len(data_da.keys)
         # Now compute the model agreement
-        if agreement_type == 'mean_bigger_than_std':
-            mmstd = data_da.std(dim='keys')
-            agreement = mmm>mmstd
-        elif agreement_type == 'sign':
-            if agreement_thresh=='at_least_70percent_agree':
-                athresh = .7*nkeys # 6/8
-            elif agreement_thresh=='at_least_80percent_agree':
-                athresh = .8*nkeys # 7/8
-            elif agreement_thresh=='at_least_100percent_agree':
-                athresh = 1*nkeys # 8/8
-            else:
-                raise Exception("Other agreement threshold for agreement_type == 'sign' is not yet implemented.")
-            # count the positives and negatives
-            positives = (data_da>0).sum(dim='keys')
-            negatives = (data_da<0).sum(dim='keys')
-            # check if either the positives or the negatives exceed the threshold
-            agreement = (positives >= athresh) + (negatives >= athresh)
-        else:
-            agreement = None
+        agreement = MMFuncs._calc_model_agreement(data_da,agreement_type='sign',agreement_thresh='at_least_80percent_agree')
                         
         return mmm, agreement
     
@@ -62,12 +68,14 @@ class MMFuncs:
         da_area     = MiscDataGetter._get_grid_cell_areas()
         romask = da_omask * region_mask * 1.
         roweights = da_area*romask
+        #print(roweights)
+        #print(data)
         spatial_mean = data.weighted(roweights).mean(["lat", "lon"])
         return spatial_mean
 
-    def _calc_regional_means(run_params,set_of_loc_reg,ds_data,name_of_dataarray):
+    def _calc_regional_means(run_params,set_of_loc_reg,run_paths,name_of_dataarray):
     
-        regional_time_series = dict()
+        regional_data = dict()
         # Loop over regions
         for loc_or_reg in set_of_loc_reg:
 
@@ -80,24 +88,55 @@ class MMFuncs:
                 raise Exception('Not yet implemented')
                 
             # initiate a dataset for this region
-            regional_time_series[loc_or_reg_string] = xr.Dataset()
-            
-            # Loop over runs
-            for key in run_params.keys():
-                # choose the data
-                data_choice = ds_data[key][name_of_dataarray]
-                # Compute the spatial average time series or extract the point location time series
+            regional_data[loc_or_reg_string] = xr.Dataset()
+
+            # if the run keys are a dimension in an xarray dataarray
+            if isinstance(run_paths,xr.DataArray):
+                #print(run_paths)
+                data_choice = run_paths#.squeeze()#.fillna(0)
+                #print(data_choice)
                 if isinstance(loc_or_reg,str):
-                    regional_time_series[loc_or_reg_string][key] = MMFuncs._calc_spatial_average(data_choice,loc_or_reg)
+                    regional_data[loc_or_reg_string] = MMFuncs._calc_spatial_average(data_choice,loc_or_reg)
                 elif isinstance(loc_or_reg,list):
-                    regional_time_series[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
+                    regional_data[loc_or_reg_string] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
                 else:
-                    raise Exception('Not yet implemented')
-                
-        return regional_time_series
+                    raise Exception('Not yet implemented')                                
+            else:
+                # Loop over runs
+                for key in run_params.keys():
+                    # choose the data
+                    if isinstance(run_paths[key],str):
+                        with xr.open_dataset(run_paths[key]) as ds:
+                            data_choice = ds[name_of_dataarray]
+                            # Compute the spatial average time series or extract the point location time series
+                            if isinstance(loc_or_reg,str):
+                                regional_data[loc_or_reg_string][key] = MMFuncs._calc_spatial_average(data_choice,loc_or_reg)
+                            elif isinstance(loc_or_reg,list):
+                                regional_data[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
+                            else:
+                                raise Exception('Not yet implemented')
+                    elif isinstance(run_paths[key],xr.Dataset):
+                        data_choice = run_paths[key][name_of_dataarray]
+                        # Compute the spatial average time series or extract the point location time series
+                        if isinstance(loc_or_reg,str):
+                            regional_data[loc_or_reg_string][key] = MMFuncs._calc_spatial_average(data_choice,loc_or_reg)
+                        elif isinstance(loc_or_reg,list):
+                            regional_data[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
+                        else:
+                            raise Exception('Not yet implemented')
+                    elif isinstance(run_paths[key],xr.DataArray):
+                        data_choice = run_paths[key]
+                        # Compute the spatial average time series or extract the point location time series
+                        if isinstance(loc_or_reg,str):
+                            regional_data[loc_or_reg_string][key] = MMFuncs._calc_spatial_average(data_choice,loc_or_reg)
+                        elif isinstance(loc_or_reg,list):
+                            regional_data[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
+                        else:
+                            raise Exception('Not yet implemented')                
+        return regional_data
     
     
-    def _calc_time_slice_averages(ds_data,pic_data,temporal_resolution,time_slices='standard',time_slice_type='anom_to_preindustrial_initial'): # time_slice_type = 'absolute values', 'anom_to_preindustrial_concurrent'
+    def _calc_time_slice_averages(ds_paths,pic_paths,temporal_resolution,time_slices='standard',time_slice_type='anom_to_preindustrial_initial'): # time_slice_type = 'absolute values', 'anom_to_preindustrial_concurrent'
     
         #initialize a dictionary containing the multimodel mean time slice averages and a dictionary containing the agreement
         time_slice_averages_mmm       = dict()
@@ -113,46 +152,94 @@ class MMFuncs:
             time_slices['4_rampdown_mid']  = slice(200,220)
             time_slices['5_rampdown_end']  = slice(260,280)
             time_slices['6_stabilization'] = slice(320,340)
+        elif time_slices == 'hysteresis_areas':
+            time_slices = dict()
+            time_slices['0_signed_hysteresis_area'] = None
+            time_slices['1_rampup_start']  = slice(None,20)
+            time_slices['2_rampup_mid']    = slice(60,80)
+            time_slices['3_rampup_end']    = slice(120,140)
+            time_slices['4_rampdown_mid']  = slice(200,220)
+            time_slices['5_rampdown_end']  = slice(260,280)
+            time_slices['6_stabilization'] = slice(320,340)
         else:
             raise Exception('Not yet implemented for other time slices.')
     
         # get a list of time slice keys
         sorted_time_slice_keys = sorted(time_slices.keys()) # making use of the 0,1,2,3,4... numbering to sort the keys chronologically
-    
+
         # loop over time slices
         for ts_key in sorted_time_slice_keys:
             if ts_key == '0_preindustrial':
-                data_dict_to_treat = pic_data
+                data_dict_to_treat = pic_paths
+            elif ts_key == '0_signed_hysteresis_area':
+                data_dict_to_treat = pic_paths
             else:
-                data_dict_to_treat = ds_data
-                
-            # loop over all runs for each time slice
-            time_slice_dict = dict()
-            for key in data_dict_to_treat.keys():
-                time_slice_dum =  data_dict_to_treat[key][temporal_resolution].isel(year=time_slices[ts_key]).mean(dim='year')
-                if time_slice_type == 'absolute_value' or ts_key == '0_preindustrial':
-                    time_slice_dum = time_slice_dum # Don't do anything
-                elif time_slice_type == 'anom_to_preindustrial_initial':
-                    pic_slice_key = '0_preindustrial' # always choose the initial time slice
-                    time_slice_pic = pic_data[key][temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
-                    time_slice_dum = time_slice_dum - time_slice_pic
-                elif time_slice_type == 'anom_to_preindustrial_concurrent':
-                    pic_slice_key = ts_key # always choose the concurrent time slice
-                    time_slice_pic = pic_data[key][temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
-                    time_slice_dum = time_slice_dum - time_slice_pic            
-    
-                time_slice_dict[key] = time_slice_dum
-    
-            # compute the multimodel mean and agreement for this time slice
-            time_slice_mmm, time_slice_agreement = MMFuncs._calc_multimodel_mean_and_agreement(time_slice_dict)
-    
+                data_dict_to_treat = ds_paths
+
+            if ts_key != '0_signed_hysteresis_area':
+                # loop over all runs for each time slice
+                time_slice_dict = dict()
+                for key in data_dict_to_treat.keys():
+                    if isinstance(data_dict_to_treat[key],str):
+                        with xr.open_dataset(data_dict_to_treat[key]) as ds:
+                            time_slice_dum =  ds[temporal_resolution].isel(year=time_slices[ts_key]).mean(dim='year')
+                            if time_slice_type == 'absolute_value' or ts_key == '0_preindustrial':
+                                time_slice_dum = time_slice_dum # Don't do anything
+                            elif time_slice_type == 'anom_to_preindustrial_initial':
+                                pic_slice_key = '0_preindustrial' # always choose the initial time slice
+                                with xr.open_dataset(pic_paths[key]) as ds_pic:
+                                    time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                                    time_slice_dum = time_slice_dum - time_slice_pic
+                            elif time_slice_type == 'anom_to_preindustrial_concurrent':
+                                pic_slice_key = ts_key # always choose the concurrent time slice
+                                with xr.open_dataset(pic_paths[key]) as ds_pic:
+                                    time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                                    time_slice_dum = time_slice_dum - time_slice_pic   
+                    elif isinstance(data_dict_to_treat[key],xr.Dataset):
+                        ds = data_dict_to_treat[key]
+                        time_slice_dum =  ds[temporal_resolution].isel(year=time_slices[ts_key]).mean(dim='year')
+                        if time_slice_type == 'absolute_value' or ts_key == '0_preindustrial':
+                            time_slice_dum = time_slice_dum # Don't do anything
+                        elif time_slice_type == 'anom_to_preindustrial_initial':
+                            pic_slice_key = '0_preindustrial' # always choose the initial time slice
+                            ds_pic = pic_paths[key]
+                            time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                            time_slice_dum = time_slice_dum - time_slice_pic
+                        elif time_slice_type == 'anom_to_preindustrial_concurrent':
+                            pic_slice_key = ts_key # always choose the concurrent time slice
+                            ds_pic = pic_paths[key]
+                            time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                            time_slice_dum = time_slice_dum - time_slice_pic 
+                    elif isinstance(data_dict_to_treat[key],xr.DataArray):
+                        da = data_dict_to_treat[key]
+                        time_slice_dum =  da.isel(year=time_slices[ts_key]).mean(dim='year')
+                        if time_slice_type == 'absolute_value' or ts_key == '0_preindustrial':
+                            time_slice_dum = time_slice_dum # Don't do anything
+                        elif time_slice_type == 'anom_to_preindustrial_initial':
+                            pic_slice_key = '0_preindustrial' # always choose the initial time slice
+                            da_pic = pic_paths[key]
+                            time_slice_pic = da_pic.isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                            time_slice_dum = time_slice_dum - time_slice_pic
+                        elif time_slice_type == 'anom_to_preindustrial_concurrent':
+                            pic_slice_key = ts_key # always choose the concurrent time slice
+                            da_pic = pic_paths[key]
+                            time_slice_pic = da_pic.isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                            time_slice_dum = time_slice_dum - time_slice_pic 
+
+                    time_slice_dict[key] = time_slice_dum.load()
+        
+                # compute the multimodel mean and agreement for this time slice
+                time_slice_mmm, time_slice_agreement = MMFuncs._calc_multimodel_mean_and_agreement(time_slice_dict)
+            
+            else:
+                time_slice_mmm = data_dict_to_treat.mean(dim='run_keys')
+                time_slice_agreement = MMFuncs._calc_model_agreement(data_dict_to_treat,agreement_type='sign',agreement_thresh='at_least_80percent_agree')
+
             # Mask out marginal seas and put into dictionaries
             da_omask  = MiscDataGetter._get_ocean_mask()
             time_slice_averages_mmm[ts_key] = time_slice_mmm.compute() * da_omask
             time_slice_averages_agreement[ts_key] = time_slice_agreement.compute() * da_omask
     
         return time_slice_averages_mmm, time_slice_averages_agreement
-
-
 
 

@@ -115,6 +115,19 @@ class ModelDataGetter:
         for key in run_paths.keys():
             open_ds[key] = xr.open_dataset(run_paths[key])
         return open_ds
+
+    @staticmethod
+    def _close_datasets(ds_dict):
+        """
+        This function serves to open the datasets listed in the run_paths.
+        """
+        for key in ds_dict.keys():
+            ds_dict[key].close()
+
+    @staticmethod
+    def _get_dataset(path):
+        with xr.open_dataset(path) as ds:
+            return ds.load()
         
     #(self,variable_to_analyze,depth_to_analyze):
     #domain_string = self._get_domain_string(variable_to_analyze)

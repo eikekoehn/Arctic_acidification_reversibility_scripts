@@ -87,6 +87,9 @@ class PackageGetter:
 
         # import conversion functions
         from funcs_for_conversions import Converter
+
+        # import functions for Taylor decomposition
+        from funcs_for_taylor_decomposition import TaylorFuncs
         
         #import get_modeldata_functions_new as ModelGetter
         #import xrmasking_functions_new as MaskGetter

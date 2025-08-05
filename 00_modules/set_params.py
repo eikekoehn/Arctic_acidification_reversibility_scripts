@@ -54,6 +54,7 @@ class Params:
         # define the different models used and their associated colors
         set_dict = dict()
         set_dict['2'] = cls(project='CMIP6', activity='CDRMIP', model='UKESM1-0-LL',   institution='MOHC',         experiment='1pctCO2-cdr', member='r1i1p1f2', preprend='1pctCO2', nyears=200, runcol=color_cycle[2]) # nyears = 'all'     
+        set_dict['3'] = cls(project='CMIP6', activity='CDRMIP', model='NorESM2-LM',    institution='NCC',          experiment='1pctCO2-cdr', member='r1i1p1f1', preprend='1pctCO2', nyears=200, runcol=color_cycle[3]) # nyears = 'all'
         return set_dict
 
     
@@ -79,3 +80,8 @@ class Params:
         
         return set_dict
 
+
+    @classmethod
+    def additional_misc_params(cls):
+        misc_params = cls(standard_salinity=35) # nyears = 'all'
+        return misc_params
