@@ -16,6 +16,7 @@ class PackageGetter:
         import importlib
         from importlib import reload
         import glob
+        from joblib import Parallel, delayed
         
         # import netcdf packages
         import netCDF4
@@ -49,6 +50,9 @@ class PackageGetter:
         import cartopy.crs as ccrs
         import cartopy
         from cartopy.util import add_cyclic_point
+
+        # import ocean packages
+        import gsw
     
         # suppress deprecation warnings
         import warnings
@@ -60,7 +64,7 @@ class PackageGetter:
 
     
     @staticmethod
-    def import_custom_packages():
+    def import_custom_packages(import_spline=True):
         import sys
         sys.path.append('../00_modules/')
 
@@ -82,15 +86,16 @@ class PackageGetter:
         # import plotting functions
         from funcs_for_plotting import Plotter
 
-        # import splining functions
-        import splining_functions as Spliner
-
         # import conversion functions
         from funcs_for_conversions import Converter
 
         # import functions for Taylor decomposition
         from funcs_for_taylor_decomposition import TaylorFuncs
-        
+
+        # import splining functions
+        if import_spline == True:
+            import splining_functions as Spliner
+    
         #import get_modeldata_functions_new as ModelGetter
         #import xrmasking_functions_new as MaskGetter
         #import xrsplining_functions as Spliner

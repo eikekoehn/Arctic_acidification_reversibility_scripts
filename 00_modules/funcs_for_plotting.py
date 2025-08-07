@@ -9,7 +9,6 @@ import numpy as np
 import sys
 sys.path.append('../00_modules/.')
 from get_misc_data import MiscDataGetter
-import splining_functions as Spliner
 from funcs_for_multimodel_analysis import MMFuncs
 
 # import plotting packages
@@ -244,7 +243,9 @@ class Plotter:
 
     @staticmethod
     def _plot_regional_time_series_fancy(run_params,time_series_dict,region_of_choice,variable_to_analyze,unit_label,include_atmCO2=True):
-    
+
+        import splining_functions as Spliner
+
         fontsize=15
         plt.rcParams['font.size']=fontsize
         fig = plt.figure(figsize=(11,2.2))
@@ -306,6 +307,105 @@ class Plotter:
             return fig,ax,ax2
         else:
             return fig,ax
+
+    @staticmethod
+    def _plot_regional_time_series_rel_to_start(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100]):
+    
+        # Get the dataset for the region of choice
+        ts_ds = time_series_dict[region_of_choice]
+    
+        # figure setup
+        fontsize=15
+        plt.rcParams['font.size']=15
+
+        # produce the figure
+        fig = plt.figure(figsize=(9,4))
+        ax = fig.add_axes([0.11,0.15,0.85,0.7])
+        for key in run_params.keys(): 
+            data_to_plot = ts_ds[key] - ts_ds[key].isel(year=0) # plot the data relative to the start (t=0)
+            ax.plot(data_to_plot,color=run_params[key].runcol,label=run_params[key].model,linewidth=2,alpha=0.75)
+        ts_mmm, _ = MMFuncs._calc_multimodel_mean_and_agreement(ts_ds)
+        data_to_plot_mmm = ts_mmm - ts_mmm.isel(year=0) # plot the data relative to the start (t=0)
+        ax.plot(data_to_plot_mmm,label='MMM',linewidth=5,color='k')
+        ax.axvline(140,linestyle='-',color='#555555')
+        ax.axvline(280,linestyle='-',color='#555555')
+        ax.set_ylabel(unit_label)
+        ax.set_xlabel('Year')
+        ax.set_xlim([0,340])
+        ax.legend(loc='lower left',bbox_to_anchor=(-.02,.99),ncols=5,columnspacing=1.1,handletextpad=0.2,handlelength=1,edgecolor='None',fontsize=fontsize-2,facecolor=None)
+        ax.set_xticks([0,70,140,210,280,340])
+        ax.set_ylim(ylims)
+        ax.set_yticks([0,50,100,150,200,250])
+        ax.set_yticklabels([0,50,100,150,200,''])
+        ax.grid(alpha=0.25)
+        ax.text(0.02,0.1,'a)',ha='left',va='top',transform=ax.transAxes)
+        miny,maxy = ax.get_ylim()
+        ax.set_ylim([miny,maxy])
+        ax.fill_between([0,20],[miny]*2,[maxy]*2,alpha=0.15,color='C0') # alpha=0.081
+        ax.fill_between([60,80],[miny]*2,[maxy]*2,alpha=0.15,color='C1')
+        ax.fill_between([200,220],[miny]*2,[maxy]*2,alpha=0.15,color='C1')
+        ax.fill_between([260,280],[miny]*2,[maxy]*2,alpha=0.15,color='C0')
+        plt.gca().spines['right'].set_visible(False)
+        plt.gca().spines['top'].set_visible(False)
+        #ax.fill_between([120,140],[miny]*2,[maxy]*2,alpha=0.081,color='C2')
+        #ax.fill_between([320,340],[miny]*2,[maxy]*2,alpha=0.081,color='C3')
+        #plt.savefig(f'plots_for_egu2025/post_EGU/time_series_sCT_{reg}_vs_time.png',dpi=300,transparent=True)
+        ax.plot()
+        return fig, ax
+
+    
+    @staticmethod
+    def _plot_regional_time_series_rel_to_start_vs_atmCO2(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100]):
+
+        import splining_functions as Spliner
+        
+        # Get atmospheric CO2 levels
+        ds_atmCO2 = MiscDataGetter._get_atmospheric_CO2(run_params)
+        
+        # Get the dataset for the region of choice
+        ts_ds = time_series_dict[region_of_choice]
+    
+        # figure setup
+        fontsize=15
+        plt.rcParams['font.size']=15
+
+        # produce the figure
+        fig = plt.figure(figsize=(4,4))
+        ax = fig.add_axes([0.225,0.15,0.7,0.7])
+        for key in run_params.keys(): 
+            co2_to_plot = ds_atmCO2[key]
+            data_to_plot = ts_ds[key] - ts_ds[key].isel(year=0) # plot the data relative to the start (t=0)
+            data_to_plot_smooth = Spliner.fspline1D(data_to_plot,0.06)
+            ax.plot(co2_to_plot.isel(year=slice(0,140)),data_to_plot_smooth[:140],color=run_params[key].runcol,label=run_params[key].model,linewidth=2,alpha=0.75)
+            ax.plot(co2_to_plot.isel(year=slice(140,280)),data_to_plot_smooth[140:280],color=run_params[key].runcol,label=run_params[key].model,linewidth=2,alpha=0.75,linestyle='--')
+
+        ts_mmm, _ = MMFuncs._calc_multimodel_mean_and_agreement(ts_ds)
+        data_to_plot_mmm = ts_mmm - ts_mmm.isel(year=0) # plot the data relative to the start (t=0)
+        data_to_plot_mmm_smooth = Spliner.fspline1D(data_to_plot_mmm,0.06)
+        ax.plot(co2_to_plot.isel(year=slice(0,140)),data_to_plot_mmm_smooth[:140],label='MMM',linewidth=5,color='k')
+        ax.plot(co2_to_plot.isel(year=slice(140,280)),data_to_plot_mmm_smooth[140:280],label='MMM',linewidth=5,color='k',linestyle='--')
+        ax.set_ylabel(unit_label)
+        ax.set_xlabel('atm. CO$_2$ (ppm)')
+        ax.set_xlim([270,1200])
+        #ax.legend(loc='lower left',bbox_to_anchor=(-.02,.99),ncols=5,columnspacing=1.1,handletextpad=0.2,handlelength=1,edgecolor='None',fontsize=fontsize-2,facecolor=None)
+        ax.set_xticks([500,750,1000])
+        ax.set_ylim(ylims)
+        ax.set_yticks([0,50,100,150,200,250])
+        ax.set_yticklabels([0,50,100,150,200,250])
+        ax.grid(alpha=0.25)
+        ax.text(0.05,0.95,'b)',ha='left',va='top',transform=ax.transAxes)
+        miny,maxy = ax.get_ylim()
+        ax.set_ylim([miny,maxy])
+        ax.fill_between([co2_to_plot.isel(year=0),co2_to_plot.isel(year=20)],[miny]*2,[maxy]*2,alpha=0.15,color='C0') # alpha=0.081
+        ax.fill_between([co2_to_plot.isel(year=60),co2_to_plot.isel(year=80)],[miny]*2,[maxy]*2,alpha=0.15,color='C1')
+        plt.gca().spines['right'].set_visible(False)
+        plt.gca().spines['top'].set_visible(False)
+        #plt.savefig(f'plots_for_egu2025/post_EGU/time_series_sCT_{reg}_vs_time.png',dpi=300,transparent=True)
+        ax.plot()
+        
+        return fig, ax 
+
+    
 
     def _plot_time_series_of_regional_hysteresis_decomposition(run_params, variable_to_analyze, loc_reg, model_ds, taylor_ds):
         

@@ -64,7 +64,7 @@ class ModelDataGetter:
         return list_of_mocsy_core_variables, list_of_mocsy_sensitivities
 
     @staticmethod
-    def _identify_path_strings(run_params,variable_to_analyze,depth_to_analyze):#,temporal_resolution):
+    def _identify_path_strings(run_params,variable_to_analyze,depth_to_analyze,verbose=False):#,temporal_resolution):
         """
         This function identifies the path for the different datasets.
         """        
@@ -94,15 +94,28 @@ class ModelDataGetter:
                 path_string = f'{base_path}/{experiment_folder}/{variable_string}/{variable_string}_{model}_processed.nc'
 
             # make sure the path string exists
+            #path_string_found = glob.glob(path_string) # glob returns a list of paths
+            #if len(path_string_found) != 1: # one path contained
+            #    raise Exception('Less or more than 1 data path found per model.')
+            #else:
+            #    identified_path = path_string_found[0]
+            #    if len(identified_path)==0:
+            #        raise Exception('Identified string is empty, indicating that no model was found.')
+            #    # add path string to dictionary of path_strings
+            #    path_strings[key] = identified_path
+
             path_string_found = glob.glob(path_string) # glob returns a list of paths
-            if len(path_string_found) != 1: # one path contained
-                raise Exception('Less or more than 1 data path found per model.')
+            if len(path_string_found) > 1: # one path contained
+                raise Exception('More than 1 data path found per model.')
             else:
-                identified_path = path_string_found[0]
-                if len(identified_path)==0:
-                    raise Exception('Identified string is empty, indicating that no model was found.')
+                if len(path_string_found) == 1:
+                    identified_path = path_string_found[0]
+                    path_strings[key] = identified_path
+                elif len(path_string_found)==0:
+                    if verbose == True:
+                        print(f'WARNING: Identified string is empty, indicating that no model was found for model {run_params[key].model} and variable {variable_string}.')
+                    path_strings[key] = ''
                 # add path string to dictionary of path_strings
-                path_strings[key] = identified_path
                 
         return path_strings
 
