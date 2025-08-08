@@ -48,6 +48,9 @@ class MMFuncs:
             else:
                 raise Exception('Not yet implemented for anything else.')
 
+            if 'depth' in da.coords:
+                da = da.reset_coords('depth', drop=True)
+                
             # Put da into list
             data_list.append(da)
 
@@ -74,7 +77,11 @@ class MMFuncs:
         return spatial_mean
 
     def _calc_regional_means(run_params,set_of_loc_reg,run_paths,name_of_dataarray):
-    
+
+        if name_of_dataarray == 'son_means':
+            name_of_dataarray_adjusted = 'seasonal_means'
+            chosen_season = 'SON'
+            
         regional_data = dict()
         # Loop over regions
         for loc_or_reg in set_of_loc_reg:
@@ -105,9 +112,13 @@ class MMFuncs:
                 # Loop over runs
                 for key in run_params.keys():
                     # choose the data
+                    # if paths were provided instead of already opened xarrays
                     if isinstance(run_paths[key],str):
                         with xr.open_dataset(run_paths[key]) as ds:
-                            data_choice = ds[name_of_dataarray]
+                            if name_of_dataarray in ['son_means','djf_means','mam_means','jja_means']:
+                                data_choice = ds[name_of_dataarray_adjusted].sel(season=chosen_season)
+                            else:
+                                data_choice = ds[name_of_dataarray]
                             # Compute the spatial average time series or extract the point location time series
                             if isinstance(loc_or_reg,str):
                                 regional_data[loc_or_reg_string][key] = MMFuncs._calc_spatial_average(data_choice,loc_or_reg)
@@ -115,8 +126,12 @@ class MMFuncs:
                                 regional_data[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
                             else:
                                 raise Exception('Not yet implemented')
+                    # if already opened xarray datasets were provided in a dictionary
                     elif isinstance(run_paths[key],xr.Dataset):
-                        data_choice = run_paths[key][name_of_dataarray]
+                        if name_of_dataarray in ['son_means','djf_means','mam_means','jja_means']:
+                            data_choice = run_paths[key][name_of_dataarray_adjusted].sel(season=chosen_season)
+                        else:
+                            data_choice = run_paths[key][name_of_dataarray]
                         # Compute the spatial average time series or extract the point location time series
                         if isinstance(loc_or_reg,str):
                             regional_data[loc_or_reg_string][key] = MMFuncs._calc_spatial_average(data_choice,loc_or_reg)
@@ -124,6 +139,7 @@ class MMFuncs:
                             regional_data[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
                         else:
                             raise Exception('Not yet implemented')
+                    # if already opened xarray dataarrays were provided in a dictionary
                     elif isinstance(run_paths[key],xr.DataArray):
                         data_choice = run_paths[key]
                         # Compute the spatial average time series or extract the point location time series
@@ -137,7 +153,11 @@ class MMFuncs:
     
     
     def _calc_time_slice_averages(ds_paths,pic_paths,temporal_resolution,time_slices='standard',time_slice_type='anom_to_preindustrial_initial'): # time_slice_type = 'absolute values', 'anom_to_preindustrial_concurrent'
-    
+
+        if temporal_resolution == 'son_means':
+            temporal_resolution_adjusted = 'seasonal_means'
+            chosen_season = 'SON'
+            
         #initialize a dictionary containing the multimodel mean time slice averages and a dictionary containing the agreement
         time_slice_averages_mmm       = dict()
         time_slice_averages_agreement = dict()
@@ -180,36 +200,58 @@ class MMFuncs:
                 # loop over all runs for each time slice
                 time_slice_dict = dict()
                 for key in data_dict_to_treat.keys():
+                    # if paths were provided instead of already opened xarrays
                     if isinstance(data_dict_to_treat[key],str):
                         with xr.open_dataset(data_dict_to_treat[key]) as ds:
-                            time_slice_dum =  ds[temporal_resolution].isel(year=time_slices[ts_key]).mean(dim='year')
+                            if temporal_resolution in ['son_means','djf_means','mam_means','jja_means']:
+                                time_slice_dum =  ds[temporal_resolution_adjusted].sel(season=chosen_season).isel(year=time_slices[ts_key]).mean(dim='year')
+                            else:
+                                time_slice_dum =  ds[temporal_resolution].isel(year=time_slices[ts_key]).mean(dim='year')
                             if time_slice_type == 'absolute_value' or ts_key == '0_preindustrial':
                                 time_slice_dum = time_slice_dum # Don't do anything
                             elif time_slice_type == 'anom_to_preindustrial_initial':
                                 pic_slice_key = '0_preindustrial' # always choose the initial time slice
                                 with xr.open_dataset(pic_paths[key]) as ds_pic:
-                                    time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                                    if temporal_resolution in ['son_means','djf_means','mam_means','jja_means']:
+                                        time_slice_pic = ds_pic[temporal_resolution_adjusted].sel(season=chosen_season).isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                                    else:
+                                        time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
                                     time_slice_dum = time_slice_dum - time_slice_pic
                             elif time_slice_type == 'anom_to_preindustrial_concurrent':
                                 pic_slice_key = ts_key # always choose the concurrent time slice
                                 with xr.open_dataset(pic_paths[key]) as ds_pic:
-                                    time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
-                                    time_slice_dum = time_slice_dum - time_slice_pic   
+                                    if temporal_resolution in ['son_means','djf_means','mam_means','jja_means']:
+                                        time_slice_pic = ds_pic[temporal_resolution_adjusted].sel(season=chosen_season).isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                                    else:
+                                        time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                                    time_slice_dum = time_slice_dum - time_slice_pic  
+                                    
+                    # if already opened xarray datasets were provided in a dictionary
                     elif isinstance(data_dict_to_treat[key],xr.Dataset):
                         ds = data_dict_to_treat[key]
-                        time_slice_dum =  ds[temporal_resolution].isel(year=time_slices[ts_key]).mean(dim='year')
+                        if temporal_resolution in ['son_means','djf_means','mam_means','jja_means']:
+                            time_slice_dum =  ds[temporal_resolution_adjusted].sel(season=chosen_season).isel(year=time_slices[ts_key]).mean(dim='year')
+                        else:
+                            time_slice_dum =  ds[temporal_resolution].isel(year=time_slices[ts_key]).mean(dim='year')
                         if time_slice_type == 'absolute_value' or ts_key == '0_preindustrial':
                             time_slice_dum = time_slice_dum # Don't do anything
                         elif time_slice_type == 'anom_to_preindustrial_initial':
                             pic_slice_key = '0_preindustrial' # always choose the initial time slice
                             ds_pic = pic_paths[key]
-                            time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                            if temporal_resolution in ['son_means','djf_means','mam_means','jja_means']:
+                                time_slice_pic = ds_pic[temporal_resolution_adjusted].sel(season=chosen_season).isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                            else:
+                                time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
                             time_slice_dum = time_slice_dum - time_slice_pic
                         elif time_slice_type == 'anom_to_preindustrial_concurrent':
                             pic_slice_key = ts_key # always choose the concurrent time slice
                             ds_pic = pic_paths[key]
-                            time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                            if temporal_resolution in ['son_means','djf_means','mam_means','jja_means']:
+                                time_slice_pic = ds_pic[temporal_resolution_adjusted].sel(season=chosen_season).isel(year=time_slices[pic_slice_key]).mean(dim='year')
+                            else:
+                                time_slice_pic = ds_pic[temporal_resolution].isel(year=time_slices[pic_slice_key]).mean(dim='year')
                             time_slice_dum = time_slice_dum - time_slice_pic 
+                    # if already opened xarray dataarrays were provided in a dictionary
                     elif isinstance(data_dict_to_treat[key],xr.DataArray):
                         da = data_dict_to_treat[key]
                         time_slice_dum =  da.isel(year=time_slices[ts_key]).mean(dim='year')

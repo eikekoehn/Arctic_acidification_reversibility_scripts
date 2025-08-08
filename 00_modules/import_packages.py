@@ -95,14 +95,6 @@ class PackageGetter:
         # import splining functions
         if import_spline == True:
             import splining_functions as Spliner
-    
-        #import get_modeldata_functions_new as ModelGetter
-        #import xrmasking_functions_new as MaskGetter
-        #import xrsplining_functions as Spliner
-        #import plotting_functions as Plotter
-        #import tipping_functions as Tipper
-        ####### import custom interpolation packages
-        #######import fastspline
         
         # Local dictionary for return
         return locals()

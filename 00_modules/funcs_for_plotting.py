@@ -312,8 +312,11 @@ class Plotter:
     def _plot_regional_time_series_without_smoothing(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100]):
 
         # Get the dataset for the region of choice
-        ts_ds = time_series_dict[region_of_choice]
-        
+        if region_of_choice != '_no_region_':
+            ts_ds = time_series_dict[region_of_choice]
+        else:
+            ts_ds = time_series_dict
+            
         # figure setup
         fontsize=15
         plt.rcParams['font.size']=15
