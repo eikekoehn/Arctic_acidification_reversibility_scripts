@@ -11,6 +11,7 @@ Minor plot adjustments:
 Analysis plots:
 - fgco2,anth
 - hysteresis analysis for h+
+- correlation plots
 
 Preprocessing:
 - processing of raw model datasets to combined 1pctCO2-1pctCO2cdr runs (double checking year alignment for each model)
