@@ -309,6 +309,52 @@ class Plotter:
             return fig,ax
 
     @staticmethod
+    def _plot_regional_time_series_without_smoothing(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100]):
+
+        # Get the dataset for the region of choice
+        ts_ds = time_series_dict[region_of_choice]
+        
+        # figure setup
+        fontsize=15
+        plt.rcParams['font.size']=15
+
+        # produce the figure
+        fig = plt.figure(figsize=(9,4))
+        ax = fig.add_axes([0.11,0.15,0.85,0.7])
+        for key in run_params.keys(): 
+            data_to_plot = ts_ds[key] # get the data 
+            ax.plot(data_to_plot,color=run_params[key].runcol,label=run_params[key].model,linewidth=2,alpha=0.75)
+        ts_mmm, _ = MMFuncs._calc_multimodel_mean_and_agreement(ts_ds)
+        data_to_plot_mmm = ts_mmm # get the multi-model mean 
+        ax.plot(data_to_plot_mmm,label='MMM',linewidth=5,color='k')
+        ax.axvline(140,linestyle='-',color='#555555')
+        ax.axvline(280,linestyle='-',color='#555555')
+        ax.set_ylabel(unit_label)
+        ax.set_xlabel('Year')
+        ax.set_xlim([0,340])
+        ax.legend(loc='lower left',bbox_to_anchor=(-.02,.99),ncols=5,columnspacing=1.1,handletextpad=0.2,handlelength=1,edgecolor='None',fontsize=fontsize-2,facecolor=None)
+        ax.set_xticks([0,70,140,210,280,340])
+        ax.set_ylim(ylims)
+        #ax.set_yticks([0,50,100,150,200,250])
+        #ax.set_yticklabels([0,50,100,150,200,''])
+        ax.grid(alpha=0.25)
+        ax.text(0.02,0.1,'a)',ha='left',va='top',transform=ax.transAxes)
+        miny,maxy = ax.get_ylim()
+        ax.set_ylim([miny,maxy])
+        ax.fill_between([0,20],[miny]*2,[maxy]*2,alpha=0.15,color='C0') # alpha=0.081
+        ax.fill_between([60,80],[miny]*2,[maxy]*2,alpha=0.15,color='C1')
+        ax.fill_between([200,220],[miny]*2,[maxy]*2,alpha=0.15,color='C1')
+        ax.fill_between([260,280],[miny]*2,[maxy]*2,alpha=0.15,color='C0')
+        plt.gca().spines['right'].set_visible(False)
+        plt.gca().spines['top'].set_visible(False)
+        #ax.fill_between([120,140],[miny]*2,[maxy]*2,alpha=0.081,color='C2')
+        #ax.fill_between([320,340],[miny]*2,[maxy]*2,alpha=0.081,color='C3')
+        #plt.savefig(f'plots_for_egu2025/post_EGU/time_series_sCT_{reg}_vs_time.png',dpi=300,transparent=True)
+        ax.plot()
+        return fig, ax
+        
+        
+    @staticmethod
     def _plot_regional_time_series_rel_to_start(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100]):
     
         # Get the dataset for the region of choice
