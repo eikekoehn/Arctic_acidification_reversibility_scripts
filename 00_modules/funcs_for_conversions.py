@@ -30,6 +30,8 @@ class Converter:
             conversion_factor = 60*60*24*365.25
         elif conversion_type == 'from_kg_to_Tg':
             conversion_factor = 1/(1000*1000*1000)
+        elif conversion_type == 'from_1_to_nano':
+            conversion_factor = 1000*1000*1000
         return conversion_factor
 
     def _convert_from_mol_per_m3_to_mumol_per_kg(run_params,run_paths,temporal_resolution,depth_to_analyze):

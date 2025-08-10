@@ -464,7 +464,7 @@ class Plotter:
         tcs =  plt.cm.tab20c( (4./3*np.arange(20*3/4)).astype(int) )
         line_colors = [tcs[3],tcs[0],tcs[6],tcs[6],tcs[6],tcs[9],tcs[9],tcs[9],tcs[13],tcs[13],tcs[13],'k']
         linestyles = ['-','-','-',':','--','-',':','--','-',':','--','-']
-        if variable_to_analyze == 'ph':
+        if variable_to_analyze == 'hplus':
             varia2 = r'[$H^+$]'
             unit = r'nmol kg$^{-1}$'
             #ylims = [-9,9]
@@ -495,7 +495,7 @@ class Plotter:
         ax.set_title(f'a) {loc_reg} {varia2} decomposition',loc='left')
         ax.set_xlabel('Year')
         ax.set_ylabel(f'Cumulative changes in {unit}')
-        if variable_to_analyze == 'ph':
+        if variable_to_analyze == 'hplus':
             csp = 0.5
         elif variable_to_analyze == 'omegaa':
             csp = 24
@@ -532,7 +532,7 @@ class Plotter:
         colors = ['k',tcs[3],tcs[0],tcs[6],tcs[7],tcs[8],tcs[9],tcs[10],tcs[11],tcs[12],tcs[13],tcs[14]]# ['k'] + list(plt.cm.tab20c((4./3*np.arange(15)).astype(int))[:11])
     
         var_map = {
-            'ph': (r'[$H^+$]', r'nmol kg$^{-1}$', [-25, 25], [-7.5, -5, -2.5, 2.5, 5, 7.5]),
+            'hplus': (r'[$H^+$]', r'nmol kg$^{-1}$', [-25, 25], [-7.5, -5, -2.5, 2.5, 5, 7.5]),
             'omegaa': (r'$\Omega_\text{Arag.}$', '-', [-.5, .5], [-.2, -.1, .1, .2])
         }
         varia2, unit, xlims, hlines = var_map[variable_to_analyze]
@@ -578,7 +578,7 @@ class Plotter:
         ax[1].set_ylim([-7.5, 2.375])
     
         # Custom axis limits for ph1 or omegaa
-        if variable_to_analyze == 'ph1':
+        if variable_to_analyze == 'hplus':
             xticks = [[-24, -18, -12], [-6, 0, 6], [12, 18, 24]]
             xlims = [[-25.5, -12], [-12, 12], [12, 25.5]]
         else:

@@ -76,7 +76,10 @@ class TaylorFuncs:
         sens_dict = dict()
         for sensvar in ['tem','sal','dic','alk']:
             sens_dict[sensvar] = xr.Dataset()
-            sensvar_to_load = f'd{variable_to_analyze}_d{sensvar}'
+            if variable_to_analyze == 'hplus':
+                sensvar_to_load = f'dh_d{sensvar}'
+            else:
+                sensvar_to_load = f'd{variable_to_analyze}_d{sensvar}'
             sens_paths = ModelDataGetter._identify_path_strings(run_params,sensvar_to_load,None)
             sens_dict[sensvar] = TaylorFuncs._interpolate_to_midpoint_in_time(sens_paths,temporal_resolution)
 
@@ -277,7 +280,7 @@ class TaylorFuncs:
         conts_for_plotting = ['taylor_sum']
         bar_labels = [r'$\Sigma_\text{Taylor}$']
         bar_colors = ['k']
-        if variable_to_analyze == 'ph':
+        if variable_to_analyze == 'hplus':
             varia2 = r'[$H^+$]'
             unit = r'nmol kg$^{-1}$'
             ylabel = '$\Delta$ '+f'{varia2} ({unit})'

@@ -5,11 +5,8 @@ Repository containing the analysis scripts and results for the manuscript on Arc
 
 Things to do:
 
-Minor plot adjustments:
-- hysteresis: ramp-up and ramp-down instead of rampup and rampdown
-
 Analysis plots:
-- hysteresis analysis for h+
+- hysteresis analysis for h+ (should be done - just needs to run through once)
 
 Preprocessing:
 - processing of raw model datasets to combined 1pctCO2-1pctCO2cdr runs (double checking year alignment for each model) (pCO2_seasonality/process_all_variables_to_optain_annual_means.ipynb)

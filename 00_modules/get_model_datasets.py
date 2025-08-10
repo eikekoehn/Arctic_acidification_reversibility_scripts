@@ -15,6 +15,7 @@ class ModelDataGetter:
         """
         This function converts the variable to analyze into a string that is used in constructing the data path.
         """
+
         if depth_to_analyze == 'surface' or depth_to_analyze == 1 or depth_to_analyze == '1':
             variable_string = variable_to_analyze+'1'
         elif depth_to_analyze == 'vertical_integral':
@@ -23,6 +24,10 @@ class ModelDataGetter:
             variable_string = variable_to_analyze
         else:
             raise Exception('Not yet implemented for other depths.')
+
+        if 'hplus' in variable_string:
+            variable_string = variable_string.replace('hplus','ph')
+
         return variable_string
 
     @staticmethod
@@ -56,7 +61,7 @@ class ModelDataGetter:
         """
         Set a list of variables that i use from the mocsy output.
         """
-        list_of_mocsy_core_variables = ['ph','omegaa','pco2','co3','denis']
+        list_of_mocsy_core_variables = ['ph','omegaa','pco2','co3','denis','hplus']
         list_of_mocsy_sensitivities  = ['dh_dalk',     'dh_ddic',     'dh_dtem',     'dh_dsal',
                                         'domegaa_dalk','domegaa_ddic','domegaa_dtem','domegaa_dsal',
                                         'dpco2_dalk',  'dpco2_ddic',  'dpco2_dtem',  'dpco2_dsal',
@@ -141,6 +146,24 @@ class ModelDataGetter:
     def _get_dataset(path):
         with xr.open_dataset(path) as ds:
             return ds.load()
+
+    @staticmethod
+    def _convert_ph_to_hplus(ds_data,convert_to_nmol_per_kg=True):
+
+        import sys
+        sys.path.append('../00_modules/.')
+        from funcs_for_conversions import Converter
+
+        ds_data_hplus = dict()
+        for key in ds_data.keys():
+            ds_data_hplus[key] = xr.Dataset()
+            ds_data_hplus[key]['annual_means'] = 10**(-1*ds_data[key]['annual_means']) 
+
+            # convert from mol kg-1 to nmol kg-1
+            if convert_to_nmol_per_kg:
+                ds_data_hplus[key]['annual_means'] *= Converter._Converter__conversion_factors('from_1_to_nano')
+            
+        return ds_data_hplus
         
     #(self,variable_to_analyze,depth_to_analyze):
     #domain_string = self._get_domain_string(variable_to_analyze)
