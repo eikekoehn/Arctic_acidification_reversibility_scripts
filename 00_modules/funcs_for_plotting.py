@@ -175,7 +175,7 @@ class Plotter:
           
             # Plot the data
             all_cs[sdx] = ax[sdx].pcolormesh(mmm_to_plot.lon,mmm_to_plot.lat,mmm_to_plot,vmin=vmin_to_plot,vmax=vmax_to_plot,cmap=cmap_to_plot,transform=ccrs.PlateCarree())
-            if time_slice_type != 'absolute_value' and ts_key != '0_preindustrial':
+            if time_slice_type != 'absolute_value':# and ts_key != '0_preindustrial':
                 ax[sdx].contourf(agreement_to_plot.lon,agreement_to_plot.lat,agreement_to_plot,colors=[(0.5,0.5,0.5,0),(0.5,0.5,0.5,0)],levels=[-0.5,0.5,1.5],hatches=['///',None],transform=ccrs.PlateCarree()); # 'cmo.phase'
     
             ax[sdx].add_feature(cartopy.feature.LAND, zorder=2, edgecolor='None',facecolor='#888888')
@@ -309,7 +309,7 @@ class Plotter:
             return fig,ax
 
     @staticmethod
-    def _plot_regional_time_series_without_smoothing(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100]):
+    def _plot_regional_time_series_without_smoothing(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100],panellabel='a)'):
 
         # Get the dataset for the region of choice
         if region_of_choice != '_no_region_':
@@ -341,7 +341,7 @@ class Plotter:
         #ax.set_yticks([0,50,100,150,200,250])
         #ax.set_yticklabels([0,50,100,150,200,''])
         ax.grid(alpha=0.25)
-        ax.text(0.02,0.1,'a)',ha='left',va='top',transform=ax.transAxes)
+        ax.text(0.02,0.1,panellabel,ha='left',va='top',transform=ax.transAxes)
         miny,maxy = ax.get_ylim()
         ax.set_ylim([miny,maxy])
         ax.fill_between([0,20],[miny]*2,[maxy]*2,alpha=0.15,color='C0') # alpha=0.081

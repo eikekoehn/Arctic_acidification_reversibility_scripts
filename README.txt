@@ -9,7 +9,6 @@ Minor plot adjustments:
 - hysteresis: ramp-up and ramp-down instead of rampup and rampdown
 
 Analysis plots:
-- fgco2,anth
 - hysteresis analysis for h+
 
 Preprocessing:

@@ -64,7 +64,93 @@ class MMFuncs:
         agreement = MMFuncs._calc_model_agreement(data_da,agreement_type='sign',agreement_thresh='at_least_80percent_agree')
                         
         return mmm, agreement
-    
+
+    def _calc_spatial_sum(data,region):#,data,omask,areaweights):
+        region_mask = MiscDataGetter._get_region_mask(region)
+        da_omask    = MiscDataGetter._get_ocean_mask()
+        da_area     = MiscDataGetter._get_grid_cell_areas()
+        romask = da_omask * region_mask * 1.
+        roweights = da_area*romask
+        #print(roweights)
+        #print(data)
+        spatial_sum = data.weighted(roweights).sum(["lat", "lon"])
+        return spatial_sum
+
+    def _calc_regional_integrals(run_params,set_of_loc_reg,run_paths,name_of_dataarray):
+
+        if name_of_dataarray == 'son_means':
+            name_of_dataarray_adjusted = 'seasonal_means'
+            chosen_season = 'SON'
+            
+        regional_data = dict()
+        # Loop over regions
+        for loc_or_reg in set_of_loc_reg:
+
+            # get the right string
+            if isinstance(loc_or_reg,str):
+                loc_or_reg_string = loc_or_reg
+            elif isinstance(loc_or_reg,list):
+                loc_or_reg_string = f'point_{loc_or_reg[0]}_{loc_or_reg[1]}'
+            else:
+                raise Exception('Not yet implemented')
+                
+            # initiate a dataset for this region
+            regional_data[loc_or_reg_string] = xr.Dataset()
+
+            # if the run keys are a dimension in an xarray dataarray
+            if isinstance(run_paths,xr.DataArray):
+                #print(run_paths)
+                data_choice = run_paths#.squeeze()#.fillna(0)
+                #print(data_choice)
+                if isinstance(loc_or_reg,str):
+                    regional_data[loc_or_reg_string] = MMFuncs._calc_spatial_sum(data_choice,loc_or_reg)
+                elif isinstance(loc_or_reg,list):
+                    regional_data[loc_or_reg_string] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
+                else:
+                    raise Exception('Not yet implemented')                                
+            else:
+                # Loop over runs
+                for key in run_params.keys():
+                    # choose the data
+                    # if paths were provided instead of already opened xarrays
+                    if isinstance(run_paths[key],str):
+                        with xr.open_dataset(run_paths[key]) as ds:
+                            if name_of_dataarray in ['son_means','djf_means','mam_means','jja_means']:
+                                data_choice = ds[name_of_dataarray_adjusted].sel(season=chosen_season)
+                            else:
+                                data_choice = ds[name_of_dataarray]
+                            # Compute the spatial average time series or extract the point location time series
+                            if isinstance(loc_or_reg,str):
+                                regional_data[loc_or_reg_string][key] = MMFuncs._calc_spatial_sum(data_choice,loc_or_reg)
+                            elif isinstance(loc_or_reg,list):
+                                regional_data[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
+                            else:
+                                raise Exception('Not yet implemented')
+                    # if already opened xarray datasets were provided in a dictionary
+                    elif isinstance(run_paths[key],xr.Dataset):
+                        if name_of_dataarray in ['son_means','djf_means','mam_means','jja_means']:
+                            data_choice = run_paths[key][name_of_dataarray_adjusted].sel(season=chosen_season)
+                        else:
+                            data_choice = run_paths[key][name_of_dataarray]
+                        # Compute the spatial average time series or extract the point location time series
+                        if isinstance(loc_or_reg,str):
+                            regional_data[loc_or_reg_string][key] = MMFuncs._calc_spatial_sum(data_choice,loc_or_reg)
+                        elif isinstance(loc_or_reg,list):
+                            regional_data[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
+                        else:
+                            raise Exception('Not yet implemented')
+                    # if already opened xarray dataarrays were provided in a dictionary
+                    elif isinstance(run_paths[key],xr.DataArray):
+                        data_choice = run_paths[key]
+                        # Compute the spatial average time series or extract the point location time series
+                        if isinstance(loc_or_reg,str):
+                            regional_data[loc_or_reg_string][key] = MMFuncs._calc_spatial_sum(data_choice,loc_or_reg)
+                        elif isinstance(loc_or_reg,list):
+                            regional_data[loc_or_reg_string][key] = data_choice.isel(lat=loc_or_reg[0],lon=loc_or_reg[1])
+                        else:
+                            raise Exception('Not yet implemented')                
+        return regional_data
+        
     def _calc_spatial_average(data,region):#,data,omask,areaweights):
         region_mask = MiscDataGetter._get_region_mask(region)
         da_omask    = MiscDataGetter._get_ocean_mask()
