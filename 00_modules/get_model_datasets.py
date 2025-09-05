@@ -74,7 +74,9 @@ class ModelDataGetter:
         This function identifies the path for the different datasets.
         """        
 
-        base_path = '/data/ekoehn/projects/pco2_seasonality/Data'
+        #base_path = '/data/ekoehn/projects/pco2_seasonality/Data'
+        base_path = '/data/ekoehn/projects/arctic_acidification_reversibility/data'
+
 
         variable_string = ModelDataGetter._get_variable_string(variable_to_analyze,depth_to_analyze)
         mocsy_core_vars, mocsy_sensitivity_vars = ModelDataGetter._get_list_of_mocsy_variables()
@@ -84,11 +86,11 @@ class ModelDataGetter:
         for key in run_params.keys():
             model = run_params[key].model
             experiment = run_params[key].experiment
-            if experiment == '1pctCO2-cdr':
-                experiment_folder = f'processed_{experiment.lower()}_data'
-            else:
-                experiment_folder = f'processed_{experiment}_data'
-            
+            #if experiment == '1pctCO2-cdr':
+            #    experiment_folder = f'processed_{experiment.lower()}_data'
+            #else:
+            #    experiment_folder = f'processed_{experiment}_data'
+            experiment_folder = f'processed_data_{experiment}'
                 
             # construct the path_string depending on whether the variable is a direct model output or output from MOCSY calculations
             if variable_to_analyze in mocsy_core_vars:

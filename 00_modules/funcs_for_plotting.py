@@ -175,7 +175,7 @@ class Plotter:
           
             # Plot the data
             all_cs[sdx] = ax[sdx].pcolormesh(mmm_to_plot.lon,mmm_to_plot.lat,mmm_to_plot,vmin=vmin_to_plot,vmax=vmax_to_plot,cmap=cmap_to_plot,transform=ccrs.PlateCarree())
-            if time_slice_type != 'absolute_value':# and ts_key != '0_preindustrial':
+            if time_slice_type != 'absolute_value' and ts_key != '0_preindustrial':
                 ax[sdx].contourf(agreement_to_plot.lon,agreement_to_plot.lat,agreement_to_plot,colors=[(0.5,0.5,0.5,0),(0.5,0.5,0.5,0)],levels=[-0.5,0.5,1.5],hatches=['///',None],transform=ccrs.PlateCarree()); # 'cmo.phase'
     
             ax[sdx].add_feature(cartopy.feature.LAND, zorder=2, edgecolor='None',facecolor='#888888')
