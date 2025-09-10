@@ -23,7 +23,9 @@ class Converter:
             conversion_factor = sw_density
         elif conversion_type == 'from_per_m3_to_per_kg':
             assert sw_density is not None
+            #print(sw_density)
             conversion_factor = 1/sw_density
+            #print(conversion_factor)
         elif conversion_type == 'from_kg_to_g':
             conversion_factor = 1000
         elif conversion_type == 'from_per_second_to_per_year':
@@ -32,6 +34,8 @@ class Converter:
             conversion_factor = 1/(1000*1000*1000)
         elif conversion_type == 'from_1_to_nano':
             conversion_factor = 1000*1000*1000
+        elif conversion_type == 'from_ppm_to_1':
+            conversion_factor = 10**(-6)
         return conversion_factor
 
     def _convert_from_mol_per_m3_to_mumol_per_kg(run_params,run_paths,temporal_resolution,depth_to_analyze):
@@ -51,14 +55,22 @@ class Converter:
                 with xr.open_dataset(run_paths[key]) as ds_data:
                     datum = ds_data[temporal_resolution]
                     with xr.open_dataset(dens_paths[key]) as ds_dens:
+                        print('indirect')
+                        print(ds_dens)
                         dens = ds_dens[temporal_resolution]
                         conv_factor = Converter.__conversion_factors('from_per_m3_to_per_kg',dens) * Converter.__conversion_factors('from_1_to_micro')
                     converted_datum = Converter.__convert_by_multiplication(datum,conv_factor)
             elif isinstance(run_paths[key],xr.Dataset):
                 datum = run_paths[key][temporal_resolution]
                 with xr.open_dataset(dens_paths[key]) as ds_dens:
+                    print('direct')
+                    #print(ds_dens)
                     dens = ds_dens[temporal_resolution]
+                    #print(dens)
+                    print(Converter.__conversion_factors('from_1_to_micro'))
+                    print(Converter.__conversion_factors('from_per_m3_to_per_kg',dens))
                     conv_factor = Converter.__conversion_factors('from_per_m3_to_per_kg',dens) * Converter.__conversion_factors('from_1_to_micro')
+                    #print(conv_factor)
                 converted_datum = Converter.__convert_by_multiplication(datum,conv_factor)
             converted_datum.attrs["units"] = "mumol per kg"
             converted_ds = xr.Dataset()

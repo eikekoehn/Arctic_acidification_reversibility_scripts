@@ -54,6 +54,7 @@ class TaylorFuncs:
         # compute driver deltas for T, S, DIC, Alk
         driver_deltas_dict = dict()
         for driver_var in ['thetao','so','dissic','talk']:
+            print(f'....{driver_var}')
             path_dum = ModelDataGetter._identify_path_strings(run_params,driver_var,depth_to_analyze)
             driver_deltas = xr.Dataset()
             for key in run_params.keys():
@@ -63,6 +64,7 @@ class TaylorFuncs:
 
         # compute the salinity normalized DIC and Alk deltas
         for driver_var in ['dissic','talk']:
+            print(f'....{driver_var}')
             path_dum = ModelDataGetter._identify_path_strings(run_params,driver_var,depth_to_analyze)
             # first normalize by salinity
             ds_norm_dict, driver_var_normalized = Converter._normalize_with_salinity(run_params,path_dum,temporal_resolution,depth_to_analyze,driver_var,standard_salinity=s0)
@@ -80,7 +82,8 @@ class TaylorFuncs:
                 sensvar_to_load = f'dh_d{sensvar}'
             else:
                 sensvar_to_load = f'd{variable_to_analyze}_d{sensvar}'
-            sens_paths = ModelDataGetter._identify_path_strings(run_params,sensvar_to_load,None)
+            print(f'....{sensvar_to_load}')
+            sens_paths = ModelDataGetter._identify_path_strings(run_params,sensvar_to_load,'surface')
             sens_dict[sensvar] = TaylorFuncs._interpolate_to_midpoint_in_time(sens_paths,temporal_resolution)
 
         # Now load and interpolate the salinity field as well as the dissic and alk field, divided by salinity (for the freshwater terms)
@@ -95,44 +98,72 @@ class TaylorFuncs:
         interpolated_div_sal_dict['so'] = TaylorFuncs._interpolate_to_midpoint_in_time(path_dum,temporal_resolution)/s0
 
         # Now put everything together to construct the terms, i.e. compute the contributions
+        print(f'....computing contributions')
         contribution_terms = dict()
+        print(f'.... t')
         contribution_terms['t'] = TaylorFuncs._multiply_sensitivity_and_deltas_and_integrate_in_time(run_params,
                                                                                                      sens_dict['tem'],
                                                                                                      driver_deltas_dict['thetao'])
+        print(f'.... s')
         contribution_terms['s'] = TaylorFuncs._multiply_sensitivity_and_deltas_and_integrate_in_time(run_params,
                                                                                                      sens_dict['sal'],
                                                                                                      driver_deltas_dict['so'])
+        print(f'.... dic')
         contribution_terms['dic'] = TaylorFuncs._multiply_sensitivity_and_deltas_and_integrate_in_time(run_params,
                                                                                                      sens_dict['dic'],
                                                                                                      driver_deltas_dict['dissic'])
+        print(f'.... alk') 
         contribution_terms['alk'] = TaylorFuncs._multiply_sensitivity_and_deltas_and_integrate_in_time(run_params,
                                                                                                      sens_dict['alk'],
                                                                                                      driver_deltas_dict['talk'])
+        print(f'.... dic_dilution') 
         contribution_terms['dic_dilution'] = TaylorFuncs._multiply_sensitivity_and_deltas_and_integrate_in_time(run_params,
                                                                                                      sens_dict['dic'],
                                                                                                      driver_deltas_dict['so'],
                                                                                                      sensitivity_adjustment_factor_dict = interpolated_div_sal_dict['dissic'])
+        print(f'.... alk_dilution') 
         contribution_terms['alk_dilution'] = TaylorFuncs._multiply_sensitivity_and_deltas_and_integrate_in_time(run_params,
                                                                                                      sens_dict['alk'],
                                                                                                      driver_deltas_dict['so'],
                                                                                                      sensitivity_adjustment_factor_dict = interpolated_div_sal_dict['talk'])        
+        print(f'.... dic_bgc') 
         contribution_terms['dic_bgc'] = TaylorFuncs._multiply_sensitivity_and_deltas_and_integrate_in_time(run_params,
                                                                                                      sens_dict['dic'],
                                                                                                      driver_deltas_dict['dissic_salinity_normalized'],
                                                                                                      sensitivity_adjustment_factor_dict = interpolated_div_sal_dict['so'])
+        print(f'.... alk_bgc') 
         contribution_terms['alk_bgc'] = TaylorFuncs._multiply_sensitivity_and_deltas_and_integrate_in_time(run_params,
                                                                                                      sens_dict['alk'],
                                                                                                      driver_deltas_dict['talk_salinity_normalized'],
                                                                                                      sensitivity_adjustment_factor_dict = interpolated_div_sal_dict['so'])     
 
+        print(f'.... summing alk_dic') 
         contribution_terms['alk_dic'] = contribution_terms['dic'] + contribution_terms['alk']
+        print(f'.... summing dilution terms') 
         contribution_terms['dilution_terms'] = contribution_terms['dic_dilution'] + contribution_terms['alk_dilution']
+        print(f'.... summing bgc terms') 
         contribution_terms['bgc_terms'] = contribution_terms['dic_bgc'] + contribution_terms['alk_bgc']
+        print(f'.... summing taylor sum') 
         contribution_terms['taylor_sum'] = contribution_terms['t'] + contribution_terms['s'] + contribution_terms['dic'] + contribution_terms['alk']
+        print(f'.... summing fwtaylor sum') 
         contribution_terms['fwtaylor_sum'] = contribution_terms['t'] + contribution_terms['s'] + contribution_terms['dic_bgc'] + contribution_terms['alk_bgc'] + contribution_terms['dic_dilution'] + contribution_terms['alk_dilution']
         
         # Expand the contributions to include an initial 0 at year 1850
-        for contributor in ['t','s','dic','alk','alk_bgc','dic_bgc','alk_dilution','dic_dilution','bgc_terms','dilution_terms','taylor_sum','fwtaylor_sum']:
+        print(f'.... include initial year')
+        for contributor in ['t',
+                            's',
+                            'dic',
+                            'alk',
+                            'dic_dilution',
+                            'alk_dilution',
+                            'dic_bgc',
+                            'alk_bgc',
+                            'alk_dic',
+                            'dilution_terms',
+                            'bgc_terms',
+                            'taylor_sum',
+                            'fwtaylor_sum']:
+            print(f'.......{contributor}')
             dummy_term = contribution_terms[contributor]
             dummy_data0 = dummy_term.isel(year=0)*0
             dummy_data0['year'] = dummy_data0['year']-1 # year 1850

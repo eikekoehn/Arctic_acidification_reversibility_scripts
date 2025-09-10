@@ -35,7 +35,7 @@ class ModelDataGetter:
         """
         This function gets the domain of the respective variable.
         """
-        if variable_to_analyze in ['ps','psl']:
+        if variable_to_analyze in ['ps','psl','tas']:
             domain_string = 'A'
         elif variable_to_analyze in ['siconc']:
             domain_string = 'SI'
@@ -57,7 +57,7 @@ class ModelDataGetter:
         return temporal_res_string
 
     @staticmethod
-    def _get_list_of_mocsy_variables():
+    def _get_list_of_mocsy_variables(depth_to_analyze):
         """
         Set a list of variables that i use from the mocsy output.
         """
@@ -66,7 +66,18 @@ class ModelDataGetter:
                                         'domegaa_dalk','domegaa_ddic','domegaa_dtem','domegaa_dsal',
                                         'dpco2_dalk',  'dpco2_ddic',  'dpco2_dtem',  'dpco2_dsal',
                                         'dco3_dalk',   'dco3_ddic',   'dco3_dtem',   'dco3_dsal']
-        return list_of_mocsy_core_variables, list_of_mocsy_sensitivities
+
+        if depth_to_analyze == 'surface':
+            depth_to_analyze = 1
+            
+        final_list_of_mocsy_core_variables = []
+        final_list_of_mocsy_sensitivities = []
+        for i in list_of_mocsy_core_variables:
+            final_list_of_mocsy_core_variables.append(f'{i}{depth_to_analyze}')
+        for i in list_of_mocsy_sensitivities:
+            final_list_of_mocsy_sensitivities.append(f'{i}{depth_to_analyze}')            
+            
+        return final_list_of_mocsy_core_variables, final_list_of_mocsy_sensitivities
 
     @staticmethod
     def _identify_path_strings(run_params,variable_to_analyze,depth_to_analyze,verbose=False):#,temporal_resolution):
@@ -77,9 +88,8 @@ class ModelDataGetter:
         #base_path = '/data/ekoehn/projects/pco2_seasonality/Data'
         base_path = '/data/ekoehn/projects/arctic_acidification_reversibility/data'
 
-
         variable_string = ModelDataGetter._get_variable_string(variable_to_analyze,depth_to_analyze)
-        mocsy_core_vars, mocsy_sensitivity_vars = ModelDataGetter._get_list_of_mocsy_variables()
+        mocsy_core_vars, mocsy_sensitivity_vars = ModelDataGetter._get_list_of_mocsy_variables(depth_to_analyze)
 
         # now construct the path strings
         path_strings = dict()
@@ -93,9 +103,9 @@ class ModelDataGetter:
             experiment_folder = f'processed_data_{experiment}'
                 
             # construct the path_string depending on whether the variable is a direct model output or output from MOCSY calculations
-            if variable_to_analyze in mocsy_core_vars:
+            if variable_string in mocsy_core_vars:
                 path_string = f'{base_path}/{experiment_folder}/mocsy_output/{variable_string}/{variable_string}_{model}_processed.nc'
-            elif variable_to_analyze in mocsy_sensitivity_vars:
+            elif variable_string in mocsy_sensitivity_vars:
                 path_string = f'{base_path}/{experiment_folder}/mocsy_sensitivities/{variable_string}/{variable_string}_{model}_processed.nc' 
             else:
                 path_string = f'{base_path}/{experiment_folder}/{variable_string}/{variable_string}_{model}_processed.nc'

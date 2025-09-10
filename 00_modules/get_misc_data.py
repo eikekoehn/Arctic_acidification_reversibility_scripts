@@ -13,7 +13,7 @@ class MiscDataGetter():
     """
     
     @staticmethod
-    def _get_atmospheric_CO2(rparams,way_of_defining='james'):
+    def _get_atmospheric_CO2(rparams,way_of_defining='james_with_model_dependent_rampup'):
         """
         Get the atmospheric CO2 concentration as defined by the 1pctCO2-cdr experiment.
         """
@@ -41,17 +41,23 @@ class MiscDataGetter():
                     da = xr.DataArray(data=xco2,coords={"year": years+1850},dims=["year"],name='atmospheric_co2')
                     da = da.assign_attrs({'unit':'ppm'})
                     da_atmCO2[key] = da
-                elif way_of_defining == 'james_with_variable_models':
+                elif way_of_defining == 'james_with_model_dependent_rampup':
                     print("james' way to define atm. xco2, but taking into account that MIROC-ES2L and CanESM5 models branched at 139 and 141 years respectively (instead of 140).")
+                    if rparams[key].model == 'MIROC-ES2L':
+                        rampup_years = 139
+                    elif rparams[key].model == 'CanESM5':
+                        rampup_years = 141
+                    else:
+                        rampup_years = 140
                     # 1% increase for 140 yr then opposite trend over next 140 yr; after hold at 284.7 ppm 
-                    yearco2=np.arange(141) #edges of years (Jan 1) - goes to Jan 1 of year 141
+                    yearco2 = np.arange(rampup_years + 1) #edges of years (Jan 1) - goes to Jan 1 of year (rampup_years + 1)
                     # 284.7 ppm is the atmospheric CO2 of piControl (1850 value in historical)
                     # first 140 years 1% increase per year
                     atmco2 = 284.7 * 1.01**yearco2
-                    # second 140 years (mirror image, decline), makes len(atmco2) = 281
+                    # second (numyears+1) years (mirror image, decline), makes len(atmco2) = (2*rampup_years + 1)
                     atmco2 = np.concatenate((atmco2, atmco2[::-1][1:]))
                     # Extend 60 years with atm CO2 = 284.7 ppm (preindustrial value), makes len(atmco2) = 341
-                    atmco2_extend = 284.7 * np.ones((60))
+                    atmco2_extend = 284.7 * np.ones((341-np.size(atmco2)))
                     atmco2 = np.concatenate((atmco2, atmco2_extend))
                     yearco2 = np.arange(len(atmco2))
                     years = np.arange(0,340)
@@ -59,7 +65,7 @@ class MiscDataGetter():
                     da = xr.DataArray(data=xco2,coords={"year": years+1850},dims=["year"],name='atmospheric_co2')
                     da = da.assign_attrs({'unit':'ppm'})
                     da_atmCO2[key] = da
-                else:
+                elif way_of_defining == 'old':
                     pi_value = 284.7  #ppm 
                     idealized_atmco2_rampup = pi_value*((1.01)**np.arange(0,140,1))
                     idealized_atmco2_rampdown = idealized_atmco2_rampup[-1]*((0.99)**np.arange(0,139,1))
@@ -71,6 +77,7 @@ class MiscDataGetter():
                     da_atmCO2[key] = da
         return da_atmCO2
 
+    
     @staticmethod
     def _get_ocean_mask():
         mask_path = '../00_support_data/ocean_land_mask.nc'

@@ -93,6 +93,7 @@ class Plotter:
         ax.gridlines(alpha=0.75)
         ax.set_extent([-180, 180, 55.0, 90], crs=ccrs.PlateCarree())
         Plotter.add_circle_boundary(ax)
+        fig.subplots_adjust(right=0.85)  # Leave space on the right for colorbar
     
         # prepare data to plot
         da_omask  = MiscDataGetter._get_ocean_mask()
@@ -184,9 +185,9 @@ class Plotter:
             ax[sdx].add_feature(cartopy.feature.LAND, zorder=1, edgecolor='black',facecolor='none',linewidth=0.75)
             ax[sdx].set_extent([-180, 180, 55.0, 90], crs=ccrs.PlateCarree())
             Plotter.add_circle_boundary(ax[sdx])
-        cbax0 = fig.add_axes([0.15,0.44,0.02,0.12])
+        cbax0 = fig.add_axes([0.144,0.44,0.02,0.12])
         cbar0 = plt.colorbar(all_cs[0],cax=cbax0,extend='both')
-        cbax1 = fig.add_axes([0.91,0.44,0.02,0.12])
+        cbax1 = fig.add_axes([0.904,0.44,0.02,0.12])
         cbar1 = plt.colorbar(all_cs[1],cax=cbax1,label=unit,extend='both')
 
         if include_region_mask is not False:
@@ -249,7 +250,11 @@ class Plotter:
         fontsize=15
         plt.rcParams['font.size']=fontsize
         fig = plt.figure(figsize=(11,2.2))
-        ax = fig.add_axes([0.06, 0.01, 0.84, 0.72])  # left, bottom, width, height
+        if include_atmCO2 == True:
+            ax = fig.add_axes([0.06, 0.01, 0.84, 0.72])  # left, bottom, width, height
+        else:
+            ax = fig.add_axes([0.12, 0.01, 0.84, 0.72])  # left, bottom, width, height
+
         #if variable_to_analyze == 'dissic1' or variable_to_analyze == 'talk1': # convert from mol m-3 to mumol kg-1
         #    ax = fig.add_axes([0.1, 0.01, 0.84, 0.72])  # left, bottom, width, height
     
@@ -278,6 +283,8 @@ class Plotter:
         ax.fill_between([200,220],[miny]*2,[maxy]*2,alpha=0.081,color='C1')
         ax.fill_between([260,280],[miny]*2,[maxy]*2,alpha=0.081,color='C0')
         ax.fill_between([320,340],[miny]*2,[maxy]*2,alpha=0.081,color='C3')
+        ax.axvline(140,color='k',alpha=1,linewidth=0.0625)
+        ax.axvline(280,color='k',alpha=1,linewidth=0.0625)
         ax.set_xticks([0,20,40,60,80,100,120,140,160,180,200,220,240,260,280,300,320,340])
         ax.set_xticklabels([0,'','','','','','',140,'','','','','','',280,'','',340],fontweight='bold')
         ax.xaxis.set_ticks_position('top')
