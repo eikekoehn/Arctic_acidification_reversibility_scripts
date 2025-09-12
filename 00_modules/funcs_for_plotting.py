@@ -20,11 +20,13 @@ import cmocean as cmo
 #%matplotlib inline
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
+import matplotlib.gridspec as gridspec
 
 # import mapping packages
 import cartopy.crs as ccrs
 import cartopy
 from cartopy.util import add_cyclic_point
+
 
 
 class Plotter:
@@ -241,6 +243,121 @@ class Plotter:
         #plt.savefig('plots_for_egu2025/map_hyst_area_norm_omegaa1_mocsy_indiv_models.png',dpi=300,transparent=True)
         plt.show()
         return fig, ax
+
+    @staticmethod
+    def _plot_variable_for_individual_models_global(run_params,variable_dict,da_name=None,vmin=0,vmax=100,cmap=plt.get_cmap('cmo.amp',10),unit='-'):
+    
+        # get number of models
+        nkeys = len(variable_dict.keys())
+        
+        # Create figure and subplots with 1 x nkeys layout
+        fig, ax = plt.subplots(1, nkeys, figsize=(3*nkeys, 5), subplot_kw={'projection': ccrs.Robinson()})
+    
+        # loop over different runs
+        for kdx,key in enumerate(variable_dict.keys()):
+            da_omask  = MiscDataGetter._get_ocean_mask()
+            data_to_plot = variable_dict[key][da_name] #* da_omask
+            data_to_plot_masked = xr.where(da_omask,data_to_plot,np.NaN)
+            if nkeys == 1:
+                axi = ax
+            else:
+                axi = ax[kdx]
+            c0 = axi.pcolormesh(data_to_plot.lon,data_to_plot.lat,data_to_plot_masked,transform=ccrs.PlateCarree(),vmin=vmin,vmax=vmax,cmap=cmap)
+            axi.coastlines()
+            axi.gridlines(alpha=0.75)
+            #axi.set_extent([-180, 180, 55.0, 90], ccrs.PlateCarree()) # # Focus on Arctic region
+            axi.add_feature(cartopy.feature.LAND, zorder=2, edgecolor='black',facecolor='#888888')
+            #Plotter.add_circle_boundary(axi)
+            axi.set_title(run_params[key].model)
+        cbax = fig.add_axes([0.92,0.25,0.02,0.5])
+        cbar = plt.colorbar(c0,cax=cbax,fraction=0.04,pad=0.01,extend='neither')
+        cbar.ax.set_title(label=unit)
+        plt.tight_layout()
+        plt.subplots_adjust(right=0.91)  # Leave space for the suptitle
+        #plt.savefig('plots_for_egu2025/map_hyst_area_norm_omegaa1_mocsy_indiv_models.png',dpi=300,transparent=True)
+        plt.show()
+        return fig, ax
+
+    
+    @staticmethod    
+    def _plot_variable_for_individual_models_global_and_arctic(run_params,variable_dict,da_name=None,vmin=0,vmax=100,cmap=plt.get_cmap('cmo.amp',10),unit='-',col=1):
+    
+        # get number of models
+        nkeys = len(variable_dict.keys())
+        
+        # Create figure and subplots with 1 x nkeys layout
+        fig = plt.figure(figsize=(10,3*nkeys))
+        # Create figure
+        #fig = plt.figure(figsize=(14, 28))
+    
+        if da_name == 'normalized_hysteresis_area':
+            cmap_extend = 'max'
+        elif  da_name == 'signed_hysteresis_area':
+            cmap_extend = 'both'
+        
+        # Set up GridSpec with 8 rows and 2 columns
+        gs = gridspec.GridSpec(nrows=8, ncols=2, figure=fig, width_ratios=[1.2, 0.8])
+    
+        axes = np.empty((8,2),dtype='object')
+        # loop over different runs
+        for kdx,key in enumerate(variable_dict.keys()):
+            da_omask  = MiscDataGetter._get_ocean_mask()
+            data_to_plot = variable_dict[key][da_name] #* da_omask
+            data_to_plot_masked = xr.where(da_omask,data_to_plot,np.NaN)
+            for mdx,mapp in enumerate(['global','arctic']):
+                if col == 1:
+                    panellabs = ['a)','b)','c)','d)','e)','f)','g)','h)']
+                elif col == 2:
+                    panellabs = ['i)','j)','k)','l)','m)','n)','o)','p)']
+    
+                panellab = panellabs[kdx]
+                if mapp == 'global':            
+                    axi = fig.add_subplot(gs[kdx, mdx], projection=ccrs.Robinson())
+                    axi.text(-0.01,0.5,f'{panellab} {run_params[key].model}',transform=axi.transAxes,ha='right',va='center')
+                elif mapp == 'arctic':
+                    axi = fig.add_subplot(gs[kdx, mdx], projection=ccrs.NorthPolarStereo())
+                    axi.set_extent([-180, 180, 55.0, 90], ccrs.PlateCarree()) # # Focus on Arctic region
+                    Plotter.add_circle_boundary(axi)
+    
+                if mapp == 'global':            
+                    c0 = axi.contourf(data_to_plot.lon,data_to_plot.lat,data_to_plot_masked,transform=ccrs.PlateCarree(),levels=np.linspace(vmin,vmax,cmap.N+1),cmap=cmap.name,extend=cmap_extend)
+                elif mapp == 'arctic':
+                    c0 = axi.pcolormesh(data_to_plot.lon,data_to_plot.lat,data_to_plot_masked,transform=ccrs.PlateCarree(),vmin=vmin,vmax=vmax,cmap=cmap)
+                axi.coastlines()
+                axi.gridlines(alpha=0.75)
+                axi.add_feature(cartopy.feature.LAND, zorder=2, edgecolor='black',facecolor='#888888')
+                axes[kdx,mdx] = axi
+        plt.subplots_adjust(wspace=0.01,hspace=0.06,right=0.91,bottom = 0.09)  # Leave space for the suptitle
+        # Manually shift the right subplot to the right
+        for row in range(nkeys):
+            axi = axes[row,0]
+            pos2 = axi.get_position()         # get [x0, y0, width, height]
+            shift = .1                      # amount to shift right (in figure fraction)
+            axi.set_position([
+                pos2.x0 + shift,
+                pos2.y0,
+                pos2.width,
+                pos2.height
+                ])
+        # Manually shift the right subplot to the right
+        for row in range(nkeys):
+            axi = axes[row,1]
+            pos2 = axi.get_position()         # get [x0, y0, width, height]
+            shift = .05                     # amount to shift right (in figure fraction)
+            axi.set_position([
+                pos2.x0 + shift,
+                pos2.y0,
+                pos2.width,
+                pos2.height
+                ])
+        cbax = fig.add_axes([0.3,0.06,0.55,0.02])
+        cbar = plt.colorbar(c0,cax=cbax,fraction=0.04,pad=0.01,extend=cmap_extend,orientation='horizontal',label=unit)
+        #cbar.ax.set_title(label=unit)
+        #plt.tight_layout()
+        #plt.savefig('plots_for_egu2025/map_hyst_area_norm_omegaa1_mocsy_indiv_models.png',dpi=300,transparent=True)
+        plt.show()
+        return fig
+    
 
     @staticmethod
     def _plot_regional_time_series_fancy(run_params,time_series_dict,region_of_choice,variable_to_analyze,unit_label,include_atmCO2=True):
