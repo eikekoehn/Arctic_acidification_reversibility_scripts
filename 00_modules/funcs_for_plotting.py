@@ -128,6 +128,87 @@ class Plotter:
             #    ax.scatter(loncho,latcho,100,'w',marker='x',transform=ccrs.PlateCarree(),linewidth=2,zorder=10,clip_on=False)
         return fig, ax 
 
+    @staticmethod
+    def plot_SO_map(data_to_plot,set_of_loc_reg,vmin,vmax,nlevs,cmap,cticks,extend,clabel,title,agreement=None):
+    
+        # initialize figure
+        fontsize=18
+        plt.rcParams['font.size']=fontsize
+        fig = plt.figure(figsize=(6,6))
+        ax = fig.add_subplot(1,1,1,projection=ccrs.SouthPolarStereo())
+        ax.set_global()
+        ax.gridlines(alpha=0.75)
+        ax.set_extent([-180, 180, -90, -30], crs=ccrs.PlateCarree())
+        Plotter.add_circle_boundary(ax)
+        fig.subplots_adjust(right=0.85)  # Leave space on the right for colorbar
+    
+        # prepare data to plot
+        da_omask  = MiscDataGetter._get_ocean_mask()
+        data_to_plot_masked = xr.where(da_omask,data_to_plot,np.NaN) # data_to_plot*da_omask
+        lon_data = data_to_plot.lon; lat_data = data_to_plot.lat
+        data_to_plot_cyclic, lon_data_cyclic = add_cyclic_point(data_to_plot_masked, coord=lon_data, axis=-1)
+        lon2d, lat2d = np.meshgrid(lon_data_cyclic, lat_data)
+    
+        # make the plot
+        c0 = ax.pcolormesh(lon2d,lat2d,data_to_plot_cyclic,transform=ccrs.PlateCarree(),vmin=vmin,vmax=vmax,cmap = cmap)
+        cbar = plt.colorbar(c0,ax=ax,fraction=0.045,label=clabel,pad=0.02,extend=extend)
+        cbar.ax.set_yticks(cticks)
+        ax.add_feature(cartopy.feature.LAND, zorder=2, edgecolor='black',facecolor='#888888')
+        ax.set_title(title,fontsize=fontsize+5)
+        if agreement is not None:
+            agreement_masked = xr.where(da_omask,agreement,np.NaN) # agreement.where(da_omask,np.NaN)
+            agreement_cyclic, lon_data_cyclic = add_cyclic_point(agreement_masked, coord=lon_data, axis=-1)
+            c1 = ax.contourf(lon2d, lat2d, agreement_cyclic,colors=[(0.5,0.5,0.5,0),(0.5,0.5,0.5,0)],levels=[-0.5,0.5,1.5],hatches=['///',None],transform=ccrs.PlateCarree()); # 'cmo.phase'
+    
+        # add markers
+        #for loc_reg in set_of_loc_reg:
+        #    if loc_reg == 'central Arctic':
+        #        region_mask = MiscDataGetter._get_region_mask(loc_reg)
+        #        ax.contour(region_mask.lon,region_mask.lat,region_mask,[0.5],colors='k',transform=ccrs.PlateCarree(),linewidths=4)
+        #        ax.contour(region_mask.lon,region_mask.lat,region_mask,[0.5],colors='w',transform=ccrs.PlateCarree(),linewidths=2) 
+            #elif isinstance(loc_reg,list):
+            #    loncho = lon_data[loc_reg[1]]
+            #    latcho = lat_data[loc_reg[0]]
+            #    ax.scatter(loncho,latcho,150,'k',marker='x',transform=ccrs.PlateCarree(),linewidth=5,zorder=10,clip_on=False)
+            #    ax.scatter(loncho,latcho,100,'w',marker='x',transform=ccrs.PlateCarree(),linewidth=2,zorder=10,clip_on=False)
+        return fig, ax 
+        
+
+    def plot_NA_map(data_to_plot,set_of_loc_reg,vmin,vmax,nlevs,cmap,cticks,extend,clabel,title,agreement=None):
+    
+        # initialize figure
+        fontsize=16
+        plt.rcParams['font.size']=fontsize
+        fig = plt.figure(figsize=(10,5.75)); ax = fig.add_subplot(1,1,1,projection=ccrs.NearsidePerspective(central_longitude=-30, central_latitude=70, satellite_height=1.2e7))
+        #ax.set_global(); 
+        ax.gridlines(alpha=0.5)
+    
+        # prepare data to plot
+        da_omask  = MiscDataGetter._get_ocean_mask()
+        data_to_plot_masked = xr.where(da_omask,data_to_plot,np.NaN) # data_to_plot*da_omask
+        lon_data = data_to_plot.lon; lat_data = data_to_plot.lat
+        data_to_plot_cyclic, lon_data_cyclic = add_cyclic_point(data_to_plot_masked, coord=lon_data, axis=-1)
+        lon2d, lat2d = np.meshgrid(lon_data_cyclic, lat_data)
+    
+        # make the plot
+        c0 = ax.contourf(lon2d,lat2d,data_to_plot_cyclic,transform=ccrs.PlateCarree(),levels = np.linspace(vmin,vmax,nlevs),cmap = cmap, extend=extend)
+        cbar = plt.colorbar(c0,ax=ax,fraction=0.045,label=clabel,pad=0.02,extend=extend)
+        cbar.ax.set_yticks(cticks)
+        ax.add_feature(cartopy.feature.LAND, zorder=2, edgecolor='black',facecolor='#888888')
+        ax.set_title(title,fontsize=fontsize+5)
+        if agreement is not None:
+            agreement_masked = xr.where(da_omask,agreement,np.NaN) # agreement.where(da_omask,np.NaN)
+            agreement_cyclic, lon_data_cyclic = add_cyclic_point(agreement_masked, coord=lon_data, axis=-1)
+            c1 = ax.contourf(lon2d, lat2d, agreement_cyclic,colors=[(0.5,0.5,0.5,0),(0.5,0.5,0.5,0)],levels=[-0.5,0.5,1.5],hatches=['///',None],transform=ccrs.PlateCarree()); # 'cmo.phase'
+    
+        # add markers
+        for loc_reg in set_of_loc_reg:
+            if loc_reg == 'central Arctic':
+                region_mask = MiscDataGetter._get_region_mask(loc_reg)
+                ax.contour(region_mask.lon,region_mask.lat,region_mask,[0.5],colors='k',transform=ccrs.PlateCarree(),linewidths=4)
+                ax.contour(region_mask.lon,region_mask.lat,region_mask,[0.5],colors='w',transform=ccrs.PlateCarree(),linewidths=2) 
+        return fig, ax 
+    
     
     @staticmethod
     def add_circle_boundary(ax):
@@ -407,7 +488,7 @@ class Plotter:
         ax.xaxis.set_ticks_position('top')
         ax.xaxis.set_label_position('top') 
         ax.tick_params(axis='x',labelsize=fontsize-2)
-        if variable_to_analyze == 'tos':
+        if variable_to_analyze == 'thetao':
             ax.legend(loc='lower left',fontsize=fontsize-3.5,framealpha=0,bbox_to_anchor=(-0.01,0.25),ncols=2,columnspacing=.75,handlelength=1.25,labelspacing=0.3,handletextpad=0.4)  
         ax.set_ylabel(f'{unit_label}')
     
