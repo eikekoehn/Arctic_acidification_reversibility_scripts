@@ -609,7 +609,7 @@ class Plotter:
 
     
     @staticmethod
-    def _plot_regional_time_series_rel_to_start_vs_atmCO2(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100]):
+    def _plot_regional_time_series_rel_to_start_vs_atmCO2(run_params,time_series_dict,region_of_choice,unit_label,ylims=[0,100],panellabel='a)'):
 
         import splining_functions as Spliner
         
@@ -647,7 +647,7 @@ class Plotter:
         ax.set_yticks([0,50,100,150,200,250])
         ax.set_yticklabels([0,50,100,150,200,250])
         ax.grid(alpha=0.25)
-        ax.text(0.05,0.95,'b)',ha='left',va='top',transform=ax.transAxes)
+        ax.text(0.05,0.95,panellabel,ha='left',va='top',transform=ax.transAxes)
         miny,maxy = ax.get_ylim()
         ax.set_ylim([miny,maxy])
         ax.fill_between([co2_to_plot.isel(year=0),co2_to_plot.isel(year=20)],[miny]*2,[maxy]*2,alpha=0.15,color='C0') # alpha=0.081

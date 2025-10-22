@@ -59,8 +59,8 @@ class Converter:
                 datum = run_paths[key][temporal_resolution]
                 with xr.open_dataset(dens_paths[key]) as ds_dens:
                     dens = ds_dens[temporal_resolution]
-                    print(Converter.__conversion_factors('from_1_to_micro'))
-                    print(Converter.__conversion_factors('from_per_m3_to_per_kg',dens))
+                    #print(Converter.__conversion_factors('from_1_to_micro'))
+                    #print(Converter.__conversion_factors('from_per_m3_to_per_kg',dens))
                     conv_factor = Converter.__conversion_factors('from_per_m3_to_per_kg',dens) * Converter.__conversion_factors('from_1_to_micro')
                 converted_datum = Converter.__convert_by_multiplication(datum,conv_factor)
             converted_datum.attrs["units"] = "mumol per kg"
