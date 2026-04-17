@@ -35,6 +35,10 @@ class Plotter:
     def _get_plot_dir(plotstring):
         if plotstring == 'standard':
             plot_dir = '../04_plots/00_drafting_stage'
+        elif plotstring == 'osm2026':
+            plot_dir = '../04_plots/01_OSM2026'
+        elif plotstring == 'review_round_1':
+            plot_dir = '../04_plots/02_review_round_1'
         else:
             plot_dir = plotstring
         return plot_dir
@@ -667,7 +671,10 @@ class Plotter:
         conts_for_plotting = ['t','s','alk','alk_dilution','alk_bgc','dic','dic_dilution','dic_bgc','alk_dic','dilution_terms','bgc_terms','taylor_sum']
         line_labels = ['T','S','A$_T$','A$_{T,fw}$','A$_{T,bgc}$','C$_T$','C$_{T,fw}$','C$_{T,bgc}$','A$_T$ + C$_T$','A$_{T,fw}$ + C$_{T,fw}$','A$_{T,bgc}$ + C$_{T,bgc}$',r'$\Sigma_\text{Taylor}$']
         tcs =  plt.cm.tab20c( (4./3*np.arange(20*3/4)).astype(int) )
-        line_colors = [tcs[3],tcs[0],tcs[6],tcs[6],tcs[6],tcs[9],tcs[9],tcs[9],tcs[13],tcs[13],tcs[13],'k']
+        #line_colors = [tcs[3],tcs[0],tcs[6],tcs[6],tcs[6],tcs[9],tcs[9],tcs[9],tcs[13],tcs[13],tcs[13],'k']
+        line_colors = ['C3','C6','C0','C0','C0','C1','C1','C1',tcs[13],tcs[13],tcs[13],'k']
+        alphas = [1,1,1,0.8,0.8,1,0.8,0.8,1,0.8,0.8,1]
+        
         linestyles = ['-','-','-',':','--','-',':','--','-',':','--','-']
         if variable_to_analyze == 'hplus':
             varia2 = r'[$H^+$]'
@@ -675,7 +682,7 @@ class Plotter:
             #ylims = [-9,9]
             #hlines = [-7.5,-5,-2.5,2.5,5,7.5]
         elif variable_to_analyze == 'omegaa':
-            varia2 = r'$\Omega_\text{Arag.}$'
+            varia2 = r'$\Omega_\text{Arag}$'
             unit = '-'
             #ylims = [-.3,.3]
             #hlines = [-.2,-.1,.1,.2]
@@ -686,11 +693,11 @@ class Plotter:
         # plot the contributions
         for i, cont in enumerate(conts_for_plotting):
             meanval,_ = MMFuncs._calc_multimodel_mean_and_agreement(taylor_ds[cont][loc_reg])
-            ax.plot(meanval,color=line_colors[i],linewidth=4,label=line_labels[i],linestyle=linestyles[i])
+            ax.plot(meanval,color=line_colors[i],linewidth=4,label=line_labels[i],linestyle=linestyles[i],alpha=alphas[i])
         # plot the direct model output
         meanmodel,_ = MMFuncs._calc_multimodel_mean_and_agreement(model_ds[loc_reg])
         meanmodel_delta = meanmodel - meanmodel.isel(year=0)
-        ax.plot(meanmodel_delta,color='r',label=f'model {varia2}',zorder=10)
+        ax.plot(meanmodel_delta,color='r',label=f'model {varia2}',zorder=10,linestyle='--')
     
         ax.set_xlim([0,340])
         ax.axvline([139.5],linestyle='-',color='#555555',alpha=1,zorder=0,linewidth=1)
@@ -699,7 +706,7 @@ class Plotter:
         ax.spines[['right', 'top']].set_visible(False)
         ax.set_title(f'a) {loc_reg} {varia2} decomposition',loc='left')
         ax.set_xlabel('Year')
-        ax.set_ylabel(f'Cumulative changes in {unit}')
+        ax.set_ylabel(f'Cumulative changes ({unit})')
         if variable_to_analyze == 'hplus':
             csp = 0.5
         elif variable_to_analyze == 'omegaa':
@@ -732,13 +739,16 @@ class Plotter:
         labels = [r'$\Sigma_\text{Taylor}$', 'T', 'S', 'A$_T$', 'A$_{T,fw}$', 'A$_{T,bgc}$', 'C$_T$', 'C$_{T,fw}$', 'C$_{T,bgc}$',
                   'A$_T$ + C$_T$', 'A$_{T,fw}$ + C$_{T,fw}$', 'A$_{T,bgc}$ + C$_{T,bgc}$']
         heights = [0.5, 0.5, 0.5, 0.5, 0.4, 0.4, 0.5, 0.4, 0.4, 0.5, 0.4, 0.4]
+        heights = [0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45]
         ypos = -1 * np.array([ -1, 0, 1, 2, 2.5, 3, 4, 4.5, 5, 6, 6.5, 7 ])
         tcs =  plt.cm.tab20c( (4./3*np.arange(20*3/4)).astype(int) )
-        colors = ['k',tcs[3],tcs[0],tcs[6],tcs[7],tcs[8],tcs[9],tcs[10],tcs[11],tcs[12],tcs[13],tcs[14]]# ['k'] + list(plt.cm.tab20c((4./3*np.arange(15)).astype(int))[:11])
-    
+        #colors = ['k',tcs[3],tcs[0],tcs[6],tcs[7],tcs[8],tcs[9],tcs[10],tcs[11],tcs[12],tcs[13],tcs[14]]# ['k'] + list(plt.cm.tab20c((4./3*np.arange(15)).astype(int))[:11])
+        colors = ['k','C3','C6','C0','C0','C0','C1','C1','C1',tcs[13],tcs[13],tcs[13]]
+        alphas = [1,1,1,1,0.6,0.6,1,0.6,0.6,1,0.6,0.6]
+
         var_map = {
             'hplus': (r'[$H^+$]', r'nmol kg$^{-1}$', [-25, 25], [-7.5, -5, -2.5, 2.5, 5, 7.5]),
-            'omegaa': (r'$\Omega_\text{Arag.}$', '-', [-.5, .5], [-.2, -.1, .1, .2])
+            'omegaa': (r'$\Omega_\text{Arag}$', '-', [-.5, .5], [-.2, -.1, .1, .2])
         }
         varia2, unit, xlims, hlines = var_map[variable_to_analyze]
         hyst_metric = 'signed_hysteresis_area'
@@ -748,20 +758,20 @@ class Plotter:
     
         for i, cont in enumerate(conts):
             meanval = hyst_taylor_contributions[cont][loc_reg].sel(h_definition=hyst_metric).mean(dim='run_keys')
-            ax[1].barh(ypos[i], meanval, height=heights[i], color=colors[i], edgecolor='None', zorder=1)
+            ax[1].barh(ypos[i], meanval, height=heights[i], color=colors[i], edgecolor='None', zorder=1, alpha=alphas[i])
             for axi in ax:
                 for key, param in run_params.items():
                     val = hyst_taylor_contributions[cont][loc_reg].sel(h_definition=hyst_metric, run_keys=key)
-                    axi.scatter(val, ypos[i], 50, color=param.runcol, clip_on=True)
+                    axi.scatter(val, ypos[i], 50, color=param.runcol, clip_on=True,edgecolor='k',linewidth=0.25)
     
         # === Model hysteresis ===
         model_y = 2
         modelvals = hyst_model[loc_reg].sel(h_definition=hyst_metric)
         modelmean = modelvals.mean(dim='run_keys')
-        ax[1].barh(model_y, modelmean, height=0.5, color='None', edgecolor='r', linewidth=1, zorder=1)
+        ax[1].barh(model_y, modelmean, height=0.45, color='None', edgecolor='r', linewidth=1, zorder=1,linestyle='--')
         for axi in ax:
             for key, param in run_params.items():
-                axi.scatter(modelvals.sel(run_keys=key), model_y, 50, color=param.runcol, clip_on=True, label=param.model)
+                axi.scatter(modelvals.sel(run_keys=key), model_y, 50, color=param.runcol, clip_on=True, label=param.model,edgecolor='k',linewidth=0.25)
     
         # === Beautify ===
         for axi in ax:
@@ -789,7 +799,7 @@ class Plotter:
         else:
             xticks = [[-.5,-.4], [-.3,-.2,-.1, 0,.1,.2, .3], [.4,.5]]
             xlims = [[-0.52, -0.3], [-0.3, 0.3], [0.3, 0.52]]
-    
+
         for i in range(3):
             ax[i].set_xticks(xticks[i])
             ax[i].set_xlim(xlims[i])

@@ -25,7 +25,8 @@ class HystFuncs:
         ds_atmCO2,
         normalizer='min_max_diff_full_cycle',
         nsteps=200,
-        return_interpolated_vectors=False
+        return_interpolated_vectors=False,
+        normalize_by_ref_axis_range=True
     ):
         """
         Calculate hysteresis areas for all models over a 1D dataset, using a reference
@@ -79,7 +80,8 @@ class HystFuncs:
                 clipped_data,
                 nsteps=nsteps,
                 normalizer=normalizer,
-                return_interpolated_vectors=return_interpolated_vectors
+                return_interpolated_vectors=return_interpolated_vectors,
+                normalize_by_ref_axis_range=normalize_by_ref_axis_range
             )
     
         return ha_dict
@@ -92,7 +94,8 @@ class HystFuncs:
         ds_atmCO2,
         normalizer='min_max_diff_full_cycle',
         nsteps=200,
-        return_interpolated_vectors=False
+        return_interpolated_vectors=False,
+        normalize_by_ref_axis_range=True
     ):
         """
         Calculate hysteresis areas for all models over a 3D dataset, using a reference
@@ -146,7 +149,8 @@ class HystFuncs:
                 clipped_data,
                 nsteps=nsteps,
                 normalizer=normalizer,
-                return_interpolated_vectors=return_interpolated_vectors
+                return_interpolated_vectors=return_interpolated_vectors,
+                normalize_by_ref_axis_range=normalize_by_ref_axis_range
             )
     
         return ha_dict

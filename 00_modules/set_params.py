@@ -53,8 +53,10 @@ class Params:
 
         # define the different models used and their associated colors
         set_dict = dict()
-        set_dict['2'] = cls(project='CMIP6', activity='CDRMIP', model='UKESM1-0-LL',   institution='MOHC',         experiment='1pctCO2-cdr', member='r1i1p1f2', preprend='1pctCO2', nyears=200, runcol=color_cycle[2]) # nyears = 'all'     
-        set_dict['3'] = cls(project='CMIP6', activity='CDRMIP', model='NorESM2-LM',    institution='NCC',          experiment='1pctCO2-cdr', member='r1i1p1f1', preprend='1pctCO2', nyears=200, runcol=color_cycle[3]) # nyears = 'all'
+        #set_dict['2'] = cls(project='CMIP6', activity='CDRMIP', model='UKESM1-0-LL',   institution='MOHC',         experiment='1pctCO2-cdr', member='r1i1p1f2', preprend='1pctCO2', nyears=200, runcol=color_cycle[2]) # nyears = 'all'     
+        #set_dict['3'] = cls(project='CMIP6', activity='CDRMIP', model='NorESM2-LM',    institution='NCC',          experiment='1pctCO2-cdr', member='r1i1p1f1', preprend='1pctCO2', nyears=200, runcol=color_cycle[3]) # nyears = 'all'
+        set_dict['4'] = cls(project='CMIP6', activity='CDRMIP', model='MIROC-ES2L',    institution='MIROC',        experiment='1pctCO2-cdr', member='r1i1p1f2', preprend='1pctCO2', nyears=200, runcol=color_cycle[4]) # nyears = 'all'
+
         return set_dict
 
     
